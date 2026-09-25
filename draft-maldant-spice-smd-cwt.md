@@ -57,22 +57,34 @@ informative:
 
 --- abstract
 
-This document specifies an extension of Selective Disclosure CBOR Web Tokens (SD-CWT) aiming at reducing their size and improving their privacy.
-It proposes to aggregate the individual hashes of the redacted claims by a single Merkle proof.
+This document specifies an extension to Selective Disclosure CBOR Web
+Tokens (SD-CWT) that reduces their size and improves their privacy
+properties. The individual hashes of redacted claims are replaced by a
+single Merkle tree root, and disclosed claims are presented using a Merkle
+proof.
 
 --- middle
 
 # Introduction {#intro}
 
-This specification creates a new format for Selective Disclosure CBOR Web Token (SD-CWT) specification {{SD-CWT}}.
-Selective Disclosure CBOR Web tokens provide an efficient way for a Relying Party to get more control on the claims he wants to present to a Verifier
-and by doing so enhances his privacy. 
-Yet, in the event he only does a partial disclosure of those claims, he is still leaking to the Verifier the number of claims he possesses ; which by definition diminishes his privacy.
-Also, each of those redacted claims, even though it is not presented to a Verifier, will inflate the presented token (SD-KBT), 34 bytes at a time.
+This document defines Selective Merkle Disclosure CBOR Web
+Tokens (SMD-CWT), an extension to {{SD-CWT}}.
 
-To tackle both those problems, we propose here, instead of individually hashing the claims and placing them in a CBOR array, to place them on a Merkle tree
-and to only leave the root hash in the SD-CWT. Then, a presentation of this token will only need to present a Merkle proof of the claim(s) to attest for their integrity.
-This proof is logarithmically smaller than having to enumerate all the redacted elements.
+SD-CWT provides an efficient mechanism for a Holder to control
+which claims it presents to a Verifier, thereby improving its privacy.
+However, when only a subset of the claims is disclosed, the Verifier
+still learns the total number of claims, which reduces the privacy
+benefit of selective disclosure. In addition, each redacted claim, even
+though it is not presented to the Verifier, adds 34 bytes to the
+presented token (SD-KBT).
+
+To address both issues, this document specifies that, instead of hashing
+each claim individually and placing the hashes in a CBOR array, the claims
+are placed in a Merkle tree and only the root hash is included in the
+SD-CWT. A presentation of the token then only needs to include a Merkle
+proof for the disclosed claim(s) to attest to their integrity. The size
+of this proof is logarithmic in the number of claims, whereas enumerating
+all redacted claims is linear.
 
 # Conventions and Definitions
 
