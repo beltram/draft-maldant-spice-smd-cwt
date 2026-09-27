@@ -49,7 +49,7 @@ author:
     email: "beltram.ietf@pm.me"
 
 normative:
-  I-D.draft-maldant-spice-smd-cwt: SD-CWT
+  I-D.draft-ietf-spice-sd-cwt-08: SD-CWT
 
 informative:
 
@@ -68,7 +68,7 @@ proof.
 # Introduction {#intro}
 
 This document defines Selective Merkle Disclosure CBOR Web
-Tokens (SMD-CWT), an extension to {{SD-CWT}}.
+Tokens (SMD-CWT), an extension to SD-CWT.
 
 SD-CWT provides an efficient mechanism for a Holder to control
 which claims it presents to a Verifier, thereby improving its privacy.
@@ -79,7 +79,7 @@ though it is not presented to the Verifier, adds 34 bytes to the
 presented token (SD-KBT).
 
 To address both issues, this document specifies that, instead of hashing
-each claim individually and placing the hashes in a CBOR array, the claims
+each claim individually and placing the hashes in a CBOR array, the claimsw
 are placed in a Merkle tree and only the root hash is included in the
 SD-CWT. A presentation of the token then only needs to include a Merkle
 proof for the disclosed claim(s) to attest to their integrity. The size
@@ -89,6 +89,30 @@ all redacted claims is linear.
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}
+
+The CBOR examples in this document are shown in CBOR Extended Diagnostic Notation (EDN) {{!I-D.ietf-cbor-edn-literals}}.
+
+Data model constraints are described using the Concise Data Definition Language (CDDL) {{!RFC8610}}.
+
+This specification uses terms from CWT {{!RFC8392}}, COSE {{!RFC9052}} {{!RFC9053}}
+and JWT {{!RFC7519}}.
+
+The terms Claim Name, Claim Key, and Claim Value are defined in {{!RFC8392}}.
+
+This specification defines the following new terms:
+
+Selective Merkle Disclosure CBOR Web Token (SMD-CWT):
+: An SD-CWT with claims enabling selective disclosure using a Merkle proof.
+
+Selective Merkle Disclosure Key Binding Token (SMD-KBT):
+: An SD-KBT used to demonstrate possession of a confirmation method and presenting some claims with a Merkle proof.
+
+The rest of the terms used in this document are semantically equivalent to the ones already defined in {{SD-CWT}}
+
+# Overview
+
+SMD-CWT is only an extension of SD-CWT ; meaning an SD-CWT is a valid SMD-CWT whereas the opposite is not necessarily true.
+They only differ by the way redacted claims are authenticated and presented. Where SD-CWT enumerates all the claims
 
 
 # Security Considerations {#security}
