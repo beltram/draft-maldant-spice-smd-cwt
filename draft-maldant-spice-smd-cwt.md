@@ -145,7 +145,6 @@ requested, and additionally supports generating SMD-CWTs.
     }
 }
 ~~~
-
 {: #fig-cwt-claimset title="CWT Claims Set"}
 
 ## Pre issuance {#tbr-tag}
@@ -174,7 +173,6 @@ uses the To Be Redacted Root Tag defined in {{tbrrt}}.
     }
 }])
 ~~~
-
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
 At each level where the To Be Redacted Root Tag is encountered, a Merkle tree is built and all inner elements are
@@ -335,11 +333,9 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
-
 {: #cddl-schema title="A complete CDDL description of SD-CWT"}
 
 # Acknowledgments
-
 {:numbered="false"}
 
 TODO acknowledge.
