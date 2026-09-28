@@ -145,6 +145,7 @@ requested, and additionally supports generating SMD-CWTs.
     }
 }
 ~~~
+
 {: #fig-cwt-claimset title="CWT Claims Set"}
 
 ## Pre issuance {#tbr-tag}
@@ -163,7 +164,7 @@ uses the To Be Redacted Root Tag defined in {{tbrrt}}.
     "inspector_license_number": 58("ABCD-123456"), /redacted/
     59([3, "inspection_dates"]) : [ /merkle-redacted of size 8/
         58(1549560720), /redacted/
-        1612498440,     /not-redacted/
+        58(1612498440), /redacted/
         58(1674004740), /redacted/
     ],
     59([2, "inspection_location"]): { /merkle-redacted of size 4/
@@ -173,6 +174,7 @@ uses the To Be Redacted Root Tag defined in {{tbrrt}}.
     }
 }])
 ~~~
+
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
 At each level where the To Be Redacted Root Tag is encountered, a Merkle tree is built and all inner elements are
@@ -180,14 +182,16 @@ placed at its leaves.
 
 ## Merkle Tree {#merkle-tree}
 
-This specification uses a left-balanced Merkle tree.
+This specification uses a left-balanced Merkle tree. We want to avoid unbalanced trees because they are vulnerable to
+forgery attacks. The tree is also left balanced because it allows using the least amount of decoys.
 
 ## Content-Type
 
 An SMD-CWT MUST declare its content type by including the `typ` protected header parameter {{!RFC9596}} with one of the
 following values:
 
-- the unsigned integer Constrained Application Protocol (CoAP) {{?RFC7252}} content-format value TBD1 (294 suggested); or
+- the unsigned integer Constrained Application Protocol (CoAP) {{?RFC7252}} content-format value TBD1 (294 suggested);
+  or
 - the string content type value `application/smd-cwt+sd-cwt`.
 
 # Presentation {#smd-kbt}
@@ -214,7 +218,7 @@ elements: the first is the logarithmic size of the desired proof length, and the
 * Data Item: (array or map)
 * Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
   Redacted Tag defined in {{Section 17.3.1 of SD-CWT}}.
-* Specification Document(s): {{tbr-tag}} of this specification
+* Specification Document (s): {{tbr-tag}} of this specification
 
 ## Media Types
 
@@ -236,9 +240,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -263,9 +267,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -284,9 +288,11 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
+
 {: #cddl-schema title="A complete CDDL description of SD-CWT"}
 
 # Acknowledgments
+
 {:numbered="false"}
 
 TODO acknowledge.
