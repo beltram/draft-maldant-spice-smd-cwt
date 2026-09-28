@@ -185,6 +185,53 @@ placed at its leaves.
 This specification uses a left-balanced Merkle tree. We want to avoid unbalanced trees because they are vulnerable to
 forgery attacks. The tree is also left balanced because it allows using the least amount of decoys.
 
+~~~ aasvg
+              root
+               |
+           .---+---.
+          /         \
+   h(h(A)+h(B))    h(h(C)+h({D}))
+        / \         / \
+       /   \       /   \
+    h(A)   h(B)  h(C)  h({D})
+      |     |     |     |
+      |     |     |     |
+      A     B     C    {D}
+
+Node: 0  1  2  3  4  5  6
+
+Leaf: 0     1     2     3
+~~~
+{: title="An 3-Claim Merkle Tree" }
+
+### Placing decoys
+
+A Merkle tree MUST contain at least one Decoy. If the tree has a number of entries that is a power of 2, it MUST gorw the tree.
+
+Then, for each the nodes in the copath of its rightmost leaf, it MUST add Decoys at the leftmost children of each of those nodes.
+
+~~~ aasvg
+                                                   X
+                                                   |
+                           .-----------------------+----------------------.
+                           |                                              |
+                           X                                              X
+                           |                                              |
+                 .---------+---------.                          .---------+---------.
+                /                     \                        /                     \
+               X                       X                      X                       X
+               |                       |                      |                       |
+           .---+---.               .---+---.              .---+---.               .---+---.
+          /         \             /         \            /         \             /         \
+         X           X           X           X          X           X           X           X
+        / \         / \         / \         / \        / \         / \         / \         / \
+       /   \       /   \       /   \       /   \      /   \       /   \       /   \       /   \
+      X     X     X     X     X     X     X     X    X     X     X     X     X     X     X     X
+
+Node: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
+~~~
+{: title="Placing Decoys" }
+
 ## Content-Type
 
 An SMD-CWT MUST declare its content type by including the `typ` protected header parameter {{!RFC9596}} with one of the
