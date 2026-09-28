@@ -4,8 +4,8 @@
 redacted_claims_root = #7.60  ; CBOR simple value 60
 
 merkle_root_value = [
-  bstr, ; root hash
   uint  ; logarithm(2) of the number of leaves represented in this root hash
+  bstr, ; root hash
 ]
 
 ; CBOR tag for wrapping the Merkle Root Hash of all the redacted elements in an array.

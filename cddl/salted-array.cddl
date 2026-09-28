@@ -1,19 +1,18 @@
 ; in SMD-CWT
 salted-merkle-array = [ +bstr-encoded-merkle-salted ]
-bstr-encoded-merkle-salted = bstr .cbor salted-merkle-entry
+bstr-encoded-merkle-salted = bstr .cbor salted-merkle-entries
 
 ; in SMD-KBT
 salted-array-proofs = [ +bstr-encoded-salted-proof ]
 bstr-encoded-salted-proof = bstr .cbor salted-merkle-proof
 
 ; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
-salted-merkle-entry = salted-claim / salted-element / decoy / salted-merkle-leaves
+salted-merkle-entry = salted-claim / salted-element / decoy / salted-merkle-entry
 salted-merkle-proof = salted-claim / salted-element / decoy / salted-merkle-proof
 
-merkle-entry = salted-claim / salted-element / decoy
-salted-merkle-leaves = [ +merkle-entry ]
+salted-merkle-entries = [ +salted-merkle-entry ]
 
-salted-merkle-proof = [ +merkle-entry ]
+salted-merkle-proof = [ +merkle-entry ] ; TODO
 
 ; repeated here
 salted-claim = [

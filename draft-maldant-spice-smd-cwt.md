@@ -182,6 +182,9 @@ placed at its leaves.
 
 ## Merkle Tree {#merkle-tree}
 
+Note on arity, we restrict this specification to 2-ary Merkle Trees as increasing the branch factor does not yield any
+benefit nor the desired properties.
+
 This specification uses a left-balanced Merkle tree. We want to avoid unbalanced trees because they are vulnerable to
 forgery attacks. The tree is also left balanced because it allows using the least amount of decoys.
 
@@ -246,6 +249,26 @@ In the figure above, the tree contains 9 entries. So we proceed as following:
     * if a Node is also a Leaf and is blank, then it is also replaced by a Decoy, like `18` in this example
     * so we replace `18`, `20` and `24` by Decoys
 
+## Computing the Merkle Root
+
+An Issuer then computes the Root Hash of this Merkle tree by:
+
+* Encoding each entry as a bstr-encoded-merkle-salted defined in {{cddl-salted-disclosed}}
+* Hash those bytes with the `sd_alg` hash algorithm
+* The hash of a parent node is the hash of its two children
+
+Place the root hash in the `redacted claim keys`. Place it in a Merkle Root value who is an Array where the first item
+is the logarithmic size of the Merkle tree producing the root hash ; and the root hash is the second and last element.
+
+~~~ cddl
+merkle_root_value = [
+  uint  ; logarithm(2) of the number of leaves represented in this root hash
+  bstr, ; root hash
+]
+~~~
+
+{: #merkle-root-value title="Merkle Root value"}
+
 ## Disclosure
 
 Here is an example of the disclosure of the `inspection_location` claim from the example in
@@ -272,10 +295,18 @@ Here is an example of the disclosure of the `inspection_location` claim from the
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 The disclosure in the SMD-CWT is an array of all the redacted elements in the container (either a CBOR Map or Array).
-Their structure is similar to the one described in {{Section 3.2 of SD-CWT}}. They are simply not individually wrapped again in a CBOR bstr.
+Their structure is similar to the one described in {{Section 3.2 of SD-CWT}}. They are simply not individually wrapped
+again in a CBOR bstr.
 
 This disclosure alongside all the other Merkle redaction has to be placed in the `sd_claims` claim in the SMD-CWT
 unprotected header as defined by {{SD-CWT}}.
+
+~~~ cddl
+; an array of bstr-encoded Salted Disclosed Claims
+{::include ./salted-array.cddl}
+~~~
+
+{: #cddl-salted-disclosed title="CDDL of Salted Disclosed Claims"}
 
 ## Content-Type
 
@@ -287,8 +318,6 @@ following values:
 - the string content type value `application/smd-cwt+sd-cwt`.
 
 # Presentation {#smd-kbt}
-
-
 
 # Privacy Considerations {#privacy}
 
