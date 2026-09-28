@@ -1,0 +1,494 @@
+
+
+
+
+Secure Patterns for Internet CrEdentials                      B. Maldant
+Internet-Draft                                               SimpleLogin
+Intended status: Standards Track                       28 September 2026
+Expires: 1 April 2027
+
+
+             Selective Disclosure CBOR Web Tokens (SD-CWT)
+                   draft-maldant-spice-smd-cwt-latest
+
+Abstract
+
+   This document specifies an extension to Selective Disclosure CBOR Web
+   Tokens (SD-CWT) that reduces their size and improves their privacy
+   properties.  The individual hashes of redacted claims are replaced by
+   the root of a single Merkle tree, and disclosed claims are presented
+   with a Merkle proof.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://beltram.github.io/draft-maldant-spice-smd-cwt/draft-maldant-
+   spice-smd-cwt.html.  Status information for this document may be
+   found at https://datatracker.ietf.org/doc/draft-maldant-spice-smd-
+   cwt/.
+
+   Discussion of this document takes place on the Secure Patterns for
+   Internet CrEdentials Working Group mailing list
+   (mailto:spice@ietf.org), which is archived at
+   https://mailarchive.ietf.org/arch/browse/spice/.  Subscribe at
+   https://www.ietf.org/mailman/listinfo/spice/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/beltram/draft-maldant-spice-smd-cwt.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 1 April 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Terminology
+   3.  Overview
+   4.  Issuance
+     4.1.  Pre issuance
+     4.2.  Merkle Tree
+     4.3.  Content-Type
+   5.  Presentation
+   6.  Privacy Considerations
+   7.  Security Considerations
+   8.  IANA Considerations
+     8.1.  CBOR Tags
+       8.1.1.  To Be Redacted Root Tag
+     8.2.  Media Types
+       8.2.1.  application/smd-cwt+sd-cwt
+       8.2.2.  application/smd-kbt+sd-kbt
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
+   Appendix A.  Complete CDDL Schema
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   This document defines Selective Merkle Disclosure CBOR Web Tokens
+   (SMD-CWT), an extension to SD-CWT [SD-CWT].
+
+   SD-CWT provides an efficient mechanism for a Holder to control which
+   claims it presents to a Verifier, thereby improving the Holder's
+   privacy.  However, when only a subset of the claims is disclosed, the
+   Verifier still learns the total number of claims, which reduces the
+   privacy benefit of selective disclosure.  In addition, each redacted
+   claim adds 34 bytes to the presented token (SD-KBT), even though it
+   is not presented to the Verifier.
+
+   To address both issues, this document specifies that, instead of
+   hashing each claim individually and placing the hashes in a CBOR
+   array, the claims are placed in a Merkle tree and only its root hash
+   is included in the SD-CWT.  A presentation of the token then only
+   needs to include a Merkle proof for the disclosed claims to attest to
+   their integrity.  The size of this proof is logarithmic in the number
+   of claims, whereas the size of an enumeration of all redacted claims
+   is linear.
+
+2.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   The CBOR examples in this document are shown in CBOR Extended
+   Diagnostic Notation (EDN) [I-D.ietf-cbor-edn-literals].
+
+   Data model constraints are described using the Concise Data
+   Definition Language (CDDL) [RFC8610].
+
+   This specification uses terms from CWT [RFC8392], COSE [RFC9052]
+   [RFC9053], and JWT [RFC7519].
+
+   The terms Claim Name, Claim Key, and Claim Value are defined in
+   [RFC8392].
+
+   This specification defines the following new terms:
+
+   Selective Merkle Disclosure CBOR Web Token (SMD-CWT):  An SD-CWT with
+      claims enabling selective disclosure using a Merkle proof.
+
+   Selective Merkle Disclosure Key Binding Token (SMD-KBT):  An SD-KBT
+      used to demonstrate possession of a confirmation method and to
+      present claims with a Merkle proof.
+
+   All other terms used in this document have the same meaning as in
+   [SD-CWT].
+
+3.  Overview
+
+   SMD-CWT is an extension of SD-CWT: every SD-CWT is a valid SMD-CWT,
+   but an SMD-CWT is not necessarily a valid SD-CWT.  The two differ
+   only in how redacted claims are authenticated and presented.
+
+   Whereas an SD-CWT Issuer enumerates all claim hashes in a CBOR array
+   or map, an SMD-CWT Issuer places these hashes at the leaves of a
+   left-balanced Merkle tree and replaces the set of claims in the
+   original payload with the root hash of that tree.
+
+   A Holder can then selectively present claims to a Verifier in an SMD-
+   KBT by replacing the disclosed claims with proofs of their inclusion
+   in the Merkle tree, whose root hash is authenticated by the Issuer in
+   the SMD-CWT.
+
+4.  Issuance
+
+   An SMD-CWT Issuer is also an SD-CWT Issuer.  It MUST be capable of
+   encoding and signing a regular SD-CWT when requested, and
+   additionally supports generating SMD-CWTs.
+
+   Figure 1 shows an example CWT payload.  Common claims are omitted for
+   brevity.
+
+   {
+       "most_recent_inspection_passed": true,
+       "inspector_license_number": "ABCD-123456",
+       "inspection_dates" : [
+           1549560720,   / 2019-02-07T17:32:00 /
+           1612498440,   / 2021-02-04T20:14:00 /
+           1674004740,   / 2023-01-17T17:19:00 /
+       ],
+       "inspection_location": {
+           "country": "us",            / United States /
+           "region": "ca",             / California /
+           "postal_code": "94188"
+       }
+   }
+
+                          Figure 1: CWT Claims Set
+
+4.1.  Pre issuance
+
+   An SMD-CWT Issuer MUST support the To Be Redacted Tag defined in
+   Section 17.3.1 of [SD-CWT] and the To Be Decoy Tag defined in
+   Section 17.3.1 of [SD-CWT].
+
+   To signal to the Issuer that a claim or array element is intended to
+   be part of a Merkle Disclosure, this specification uses the To Be
+   Redacted Root Tag defined in Section 8.1.1.
+
+   Figure 2 shows the example payload annotated accordingly.
+
+   59([3, { /merkle-redacted of size 8/
+       "most_recent_inspection_passed": true, /not-redacted/
+       "inspector_license_number": 58("ABCD-123456"), /redacted/
+       59([3, "inspection_dates"]) : [ /merkle-redacted of size 8/
+           58(1549560720), /redacted/
+           1612498440,     /not-redacted/
+           58(1674004740), /redacted/
+       ],
+       59([2, "inspection_location"]): { /merkle-redacted of size 4/
+           "country": 58("us"),   /redacted/
+           "region": 58("ca"),    /redacted/
+           "postal_code": "94188" /not-redacted/
+       }
+   }])
+
+                   Figure 2: CWT Claims Set Pre Issuance
+
+   At each level where the To Be Redacted Root Tag is encountered, a
+   Merkle tree is built and all inner elements are placed at its leaves.
+
+4.2.  Merkle Tree
+
+   This specification uses a left-balanced Merkle tree.
+
+4.3.  Content-Type
+
+   An SMD-CWT MUST declare its content type by including the typ
+   protected header parameter [RFC9596] with one of the following
+   values:
+
+   *  the unsigned integer Constrained Application Protocol (CoAP)
+      [RFC7252] content-format value TBD1 (294 suggested); or
+
+   *  the string content type value application/smd-cwt+sd-cwt.
+
+5.  Presentation
+
+6.  Privacy Considerations
+
+7.  Security Considerations
+
+   TODO Security
+
+8.  IANA Considerations
+
+8.1.  CBOR Tags
+
+   IANA is requested to add the following entry to the "CBOR Tags"
+   registry (https://www.iana.org/assignments/cbor-tags/cbor-
+   tags.xhtml#tags):
+
+8.1.1.  To Be Redacted Root Tag
+
+   This tag identifies an array or map containing elements to be
+   redacted.  The value of this tag is an array of two elements: the
+   first is the logarithmic size of the desired proof length, and the
+   second is the wrapped array or map.
+
+   *  Tag: TBD2 (suggested 59)
+
+   *  Data Item: (array or map)
+
+   *  Semantics: An array or map containing elements to be redacted with
+      a Merkle proof, each tagged with the To Be Redacted Tag defined in
+      Section 17.3.1 of [SD-CWT].
+
+   *  Specification Document(s): Section 4.1 of this specification
+
+8.2.  Media Types
+
+   IANA is requested to add the following entries to the "Media Types"
+   registry (https://www.iana.org/assignments/media-types/media-
+   types.xhtml#application):
+
+8.2.1.  application/smd-cwt+sd-cwt
+
+   The following completed registration template is provided:
+
+   *  Type name: application
+
+   *  Subtype name: smd-cwt
+
+   *  Required parameters: n/a
+
+   *  Optional parameters: n/a
+
+   *  Encoding considerations: binary
+
+   *  Security considerations: Section 7 of this specification and
+      [RFC8392]
+
+   *  Interoperability considerations: n/a
+
+   *  Published specification: Section 4 of this specification
+
+   *  Applications that use this media type: TBD
+
+   *  Fragment identifier considerations: n/a
+
+   *  Additional information:
+
+      -  Magic number(s): n/a
+
+      -  File extension(s): n/a
+
+      -  Macintosh file type code(s): n/a
+
+   *  Person & email address to contact for further information: SPICE
+      WG mailing list (spice@ietf.org) or IETF Security Area
+      (saag@ietf.org)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: See Author's Addresses section
+
+   *  Change controller: IETF
+
+   *  Provisional registration?  No
+
+8.2.2.  application/smd-kbt+sd-kbt
+
+   The following completed registration template is provided:
+
+   *  Type name: application
+
+   *  Subtype name: kb+cwt
+
+   *  Required parameters: n/a
+
+   *  Optional parameters: n/a
+
+   *  Encoding considerations: binary
+
+   *  Security considerations: Section 7 of this specification and
+      [RFC8392]
+
+   *  Interoperability considerations: n/a
+
+   *  Published specification: Section 5 of this specification
+
+   *  Applications that use this media type: TBD
+
+   *  Fragment identifier considerations: n/a
+
+   *  Additional information:
+
+      -  Magic number(s): n/a
+
+      -  File extension(s): n/a
+
+      -  Macintosh file type code(s): n/a
+
+   *  Person & email address to contact for further information: SPICE
+      WG mailing list (spice@ietf.org) or IETF Security Area
+      (saag@ietf.org)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: See Author's Addresses section
+
+   *  Change controller: IETF
+
+   *  Provisional registration?  No
+
+9.  References
+
+9.1.  Normative References
+
+   [I-D.ietf-cbor-edn-literals]
+              Bormann, C., "Concise Diagnostic Notation (CDN)", Work in
+              Progress, Internet-Draft, draft-ietf-cbor-edn-literals-27,
+              20 July 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-cbor-edn-literals-27>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8392]  Jones, M., Wahlstroem, E., Erdtman, S., and H. Tschofenig,
+              "CBOR Web Token (CWT)", RFC 8392, DOI 10.17487/RFC8392,
+              May 2018, <https://www.rfc-editor.org/rfc/rfc8392>.
+
+   [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
+              Definition Language (CDDL): A Notational Convention to
+              Express Concise Binary Object Representation (CBOR) and
+              JSON Data Structures", RFC 8610, DOI 10.17487/RFC8610,
+              June 2019, <https://www.rfc-editor.org/rfc/rfc8610>.
+
+   [RFC9052]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Structures and Process", STD 96, RFC 9052,
+              DOI 10.17487/RFC9052, August 2022,
+              <https://www.rfc-editor.org/rfc/rfc9052>.
+
+   [RFC9053]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Initial Algorithms", RFC 9053, DOI 10.17487/RFC9053,
+              August 2022, <https://www.rfc-editor.org/rfc/rfc9053>.
+
+   [RFC9596]  Jones, M.B. and O. Steele, "CBOR Object Signing and
+              Encryption (COSE) "typ" (type) Header Parameter",
+              RFC 9596, DOI 10.17487/RFC9596, June 2024,
+              <https://www.rfc-editor.org/rfc/rfc9596>.
+
+   [SD-CWT]   Prorock, M., Steele, O., Birkholz, H., and R. Mahy,
+              "Selective Disclosure CBOR Web Tokens (SD-CWT)", Work in
+              Progress, Internet-Draft, draft-ietf-spice-sd-cwt-08, 1
+              June 2026, <https://datatracker.ietf.org/doc/html/draft-
+              ietf-spice-sd-cwt-08>.
+
+9.2.  Informative References
+
+   [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
+              Application Protocol (CoAP)", RFC 7252,
+              DOI 10.17487/RFC7252, June 2014,
+              <https://www.rfc-editor.org/rfc/rfc7252>.
+
+Appendix A.  Complete CDDL Schema
+
+   ; in SMD-CWT
+   salted-merkle-array = [ +bstr-encoded-merkle-salted ]
+   bstr-encoded-merkle-salted = bstr .cbor salted-merkle-entry
+
+   ; in SMD-KBT
+   salted-array-proofs = [ +bstr-encoded-salted-proof ]
+   bstr-encoded-salted-proof = bstr .cbor salted-merkle-proof
+
+   ; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
+   salted-merkle-entry = salted-claim / salted-element / decoy / salted-merkle-leaves
+   salted-merkle-proof = salted-claim / salted-element / decoy / salted-merkle-proof
+
+   merkle-entry = salted-claim / salted-element / decoy
+   salted-merkle-leaves = [ +merkle-entry ]
+
+   salted-merkle-proof = [ +merkle-entry ]
+
+   ; repeated here
+   salted-claim = [
+     bstr .size 16,     ; 128-bit salt
+     any,               ; Claim Value
+     (int / text)       ; Claim Key
+   ]
+   salted-element = [
+     bstr .size 16,     ; 128-bit salt
+     any                ; Claim Value
+   ]
+   decoy = [
+     bstr .size 16      ; 128-bit salt
+   ]
+
+   ; redacted_claims_root is used as a map label. The corresponding value is
+   ; a Redacted Claim Root Hash.
+   ; TODO: any Unassigned value in https://www.iana.org/assignments/cbor-simple-values#simple
+   redacted_claims_root = #7.60  ; CBOR simple value 60
+
+   merkle_root_value = [
+     bstr, ; root hash
+     uint  ; logarithm(2) of the number of leaves represented in this root hash
+   ]
+
+   ; CBOR tag for wrapping the Merkle Root Hash of all the redacted elements in an array.
+   ; TODO: any Unassigned in https://www.iana.org/assignments/cbor-tags#tags
+   MERKLE_REDACTED_ELEMENT_TAGNUM = 89
+
+   ; redacted_elements_root is used in CDDL payloads that contain
+   ; array elements that are redacted.
+   redacted_elements_root = #6.<MERKLE_REDACTED_ELEMENT_TAGNUM>( merkle_root_value )
+
+              Figure 3: A complete CDDL description of SD-CWT
+
+Acknowledgments
+
+   TODO acknowledge.
+
+Author's Address
+
+   Beltram Maldant
+   SimpleLogin
+   Email: beltram.ietf@pm.me
