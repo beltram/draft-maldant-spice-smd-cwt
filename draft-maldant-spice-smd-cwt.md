@@ -145,7 +145,8 @@ requested, and additionally supports generating SMD-CWTs.
     }
 }
 ~~~
-{: #fig-cwt-claimset title="CWT Claims Set"}
+
+{: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre issuance {#tbr-tag}
 
@@ -173,6 +174,7 @@ uses the To Be Redacted Root Tag defined in {{tbrrt}}.
     }
 }])
 ~~~
+
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
 At each level where the To Be Redacted Root Tag is encountered, a Merkle tree is built and all inner elements are
@@ -200,39 +202,80 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
-{: title="An 3-Claim Merkle Tree" }
+
+{: #fig-merkle-tree-example title="An 3-Claim Merkle Tree" }
 
 ### Placing decoys
 
-A Merkle tree MUST contain at least one Decoy. If the tree has a number of entries that is a power of 2, it MUST gorw the tree.
+A Merkle tree MUST contain at least one Decoy. If the tree has a number of entries that is a power of 2, the tree MUST
+grow.
 
-Then, for each the nodes in the copath of its rightmost leaf, it MUST add Decoys at the leftmost children of each of those nodes.
+Then, for each the nodes in the copath of its rightmost leaf, it MUST replace all the leftmost blank children of each of
+those nodes by Decoys.
 
 ~~~ aasvg
                                                    X
                                                    |
                            .-----------------------+-----------------------.
                            |                                               |
-                           X                                               X
+                           V                                               W
                            |                                               |
                  .---------+---------.                           .---------+---------.
                 /                     \                         /                     \
-               X                       X                       X                       X
+               R                       S                       T                       U
                |                       |                       |                       |
            .---+---.               .---+---.               .---+---.               .---+---.
           /         \             /         \             /         \             /         \
-         X           X           X           X           X           X           X           X
+         J           K           L           M           N           O           P           Q
         / \         / \         / \         / \         / \         / \         / \         / \
        /   \       /   \       /   \       /   \       /   \       /   \       /   \       /   \
-      A     B     C     D     E     F     G     H     I     _     K     L     M     N     O     P
+      A     B     C     D     E     F     G     H     I     d     d     _     d     _     _     _
 
 Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
+
 {: title="Placing Decoys" }
 
-In the figure above, the tree contains 9
+In the figure above, the tree contains 9 entries. So we proceed as following:
+
+* we take the rightmost leaf of the tree: `I`
+* we compute its copath: `18, 21, 27, 7` or (`_, O, U, V`)
+* for each node on this copath, we replace the leftmost children with a decoy `d`
+    * if a Node is also a Leaf and is blank, then it is also replaced by a Decoy, like `18` in this example
+    * so we replace `18`, `20` and `24` by Decoys
+
+## Disclosure
+
+Here is an example of the disclosure of the `inspection_location` claim from the example in
+{{fig-cwt-claimset-example}}.
+
+~~~ cbor-diag
+<<[
+    [
+        /salt/   h'e39612407e99a347d61442957b3dfdac',
+        /value/  "us",
+        /claim/  "country"
+    ],
+    [
+        /salt/   h'4569990258b25a5267c17a3e3a225ec3',
+        /value/  "ca",
+        /claim/  "region"
+    ],
+    [
+        /salt/   h'e27403129cd88bf8fee4193e65339a35',
+    ]
+]>>
+~~~
+
+{: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
+
+The disclosure in the SMD-CWT is an array of all the redacted elements in the container (either a CBOR Map or Array).
+Their structure is similar to the one described in {{Section 3.2 of SD-CWT}}. They are simply not individually wrapped again in a CBOR bstr.
+
+This disclosure alongside all the other Merkle redaction has to be placed in the `sd_claims` claim in the SMD-CWT
+unprotected header as defined by {{SD-CWT}}.
 
 ## Content-Type
 
@@ -244,6 +287,8 @@ following values:
 - the string content type value `application/smd-cwt+sd-cwt`.
 
 # Presentation {#smd-kbt}
+
+
 
 # Privacy Considerations {#privacy}
 
@@ -337,9 +382,11 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
+
 {: #cddl-schema title="A complete CDDL description of SD-CWT"}
 
 # Acknowledgments
+
 {:numbered="false"}
 
 TODO acknowledge.
