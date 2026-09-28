@@ -226,9 +226,11 @@ Then, for each the nodes in the copath of its rightmost leaf, it MUST add Decoys
        /   \       /   \       /   \       /   \      /   \       /   \       /   \       /   \
       X     X     X     X     X     X     X     X    X     X     X     X     X     X     X     X
 
-Node: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
+Node: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14   15
 ~~~
 {: title="Placing Decoys" }
+
+In the figure above, the tree contains 9
 
 ## Content-Type
 
