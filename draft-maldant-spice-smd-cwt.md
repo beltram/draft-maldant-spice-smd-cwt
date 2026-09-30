@@ -145,6 +145,7 @@ requested, and additionally supports generating SMD-CWTs.
     }
 }
 ~~~
+
 {: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre-Issuance {#tbr-tag}
@@ -152,7 +153,8 @@ requested, and additionally supports generating SMD-CWTs.
 An SMD-CWT Issuer MUST support the To Be Redacted Tag and the To Be Decoy Tag, both defined in
 {{Section 17.3.1 of SD-CWT}}.
 
-The To Be Redacted Root Tag, defined in {{tbrrt}}, signals to the Issuer that a claim or array element is intended to be
+The `To Be Redacted Root Tag`, defined in {{tbrrt}}, signals to the Issuer that a claim or array element is intended to
+be
 part of a Merkle Disclosure.
 
 {{fig-cwt-claimset-pre-issuance}} shows the example payload annotated accordingly.
@@ -173,6 +175,7 @@ part of a Merkle Disclosure.
     }
 }])
 ~~~
+
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
 For each occurrence of the To Be Redacted Root Tag, at any level, a Merkle tree is built and all elements of the tagged
@@ -203,6 +206,7 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
+
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
 ### Placing Decoys
@@ -235,6 +239,7 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
+
 {: #fig-placing-decoys title="Placing Decoys"}
 
 In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed as follows:
@@ -253,17 +258,47 @@ The Issuer then computes the root hash of the Merkle tree as follows:
 2. The resulting bytes are hashed with the `sd_alg` hash algorithm.
 3. The hash of a parent node is the hash of its two children.
 
-The root hash is placed in the `redacted claim keys`, in a Merkle Root value ({{merkle-root-value}}). A Merkle Root value
-is an array of two elements: the first is the logarithmic size of the Merkle tree producing the root hash, and the
-second is the root hash.
+### Inserting root hash
+
+The root hash now has to be inserted in the original payload in lieu of the claims redacted. Those claims are declared
+within a container ; either a Map or an Array. Since we annotated the container itself with the
+`To Be Redacted Root Tag`, there cannot be "regular" `redacted_claim_keys` (TODO link) or redacted array elements (tag
+
+60) (TODO link) inside this container.
+
+Regardless the parent container, the root hash is represented using a `Redacted Root Hash`. It is an array of two
+elements: the first is the logarithmic size of the Merkle tree producing the root hash, and the second is the root hash.
 
 ~~~ cddl
-merkle_root_value = [
-  uint  ; logarithm(2) of the number of leaves represented in this root hash
+redacted_root_hash = [
+  uint,  ; logarithm(2) of the number of leaves represented in this root hash
   bstr, ; root hash
 ]
 ~~~
-{: #merkle-root-value title="Merkle Root value"}
+
+{: #redacted-root-hash title="Redacted Root Hash"}
+
+If the redaction happens in a Map, the root hash is placed in the `map_redacted_root_hash` claim, in a
+`Redacted Root Hash`
+({{redacted-root-hash}}).
+
+~~~ cddl
+/ map_redacted_root_hash / simple(60) : [ uint, bstr ]
+~~~
+
+{: #map-redacted-root-hash title="Map Redacted Root Hash"}
+
+If the redaction happens in a Array, the root hash is placed in the `array_redacted_root_hash` at the end of the array
+(in case of partial redaction).
+
+~~~ cddl
+"inspection_dates" : [
+        1612498440, / item 1 not redacted /
+        60([ uint, bstr ]) / root hash of item 0 and 2 /
+    ],
+~~~
+
+{: #array-redacted-root-hash title="Array Redacted Root Hash"}
 
 ## Disclosure
 
@@ -287,6 +322,7 @@ merkle_root_value = [
     ]
 ]>>
 ~~~
+
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a disclosure is an array of all the redacted elements of a container (either a CBOR map or array).
@@ -300,6 +336,7 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 ; an array of bstr-encoded Salted Disclosed Claims
 {::include ./cddl/salted-array.cddl}
 ~~~
+
 {: #cddl-salted-disclosed title="CDDL of Salted Disclosed Claims"}
 
 ## Content-Type
@@ -312,6 +349,8 @@ following values:
 - the string content type value `application/smd-cwt+sd-cwt`.
 
 # Presentation {#smd-kbt}
+
+
 
 # Privacy Considerations {#privacy}
 
@@ -335,7 +374,7 @@ elements: the first is the logarithmic size of the desired proof length, and the
 * Data Item: (array or map)
 * Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
   Redacted Tag defined in {{Section 17.3.1 of SD-CWT}}.
-* Specification Document(s): {{tbr-tag}} of this specification
+* Specification Document (s): {{tbr-tag}} of this specification
 
 ## Media Types
 
@@ -357,9 +396,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -384,9 +423,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -405,9 +444,11 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
+
 {: #cddl-schema title="A complete CDDL description of SD-CWT"}
 
 # Acknowledgments
+
 {:numbered="false"}
 
 TODO acknowledge.
