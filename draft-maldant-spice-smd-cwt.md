@@ -194,13 +194,13 @@ left-balanced tree minimizes the number of Decoys required. {{fig-merkle-tree-ex
                |
            .---+---.
           /         \
-   h(h(A)+h(B))    h(h(C)+h({D}))
+   h(h(A)+h(B))    h(h(C)+h(d))
         / \         / \
        /   \       /   \
-    h(A)   h(B)  h(C)  h({D})
+    h(A)   h(B)  h(C)  h(d)
       |     |     |     |
       |     |     |     |
-      A     B     C    {D}
+      A     B     C    d
 
 Node: 0  1  2  3  4  5  6
 
@@ -300,7 +300,7 @@ If the redaction happens in a Array, the root hash is placed in the `array_redac
 
 {: #array-redacted-root-hash title="Array Redacted Root Hash"}
 
-## Disclosure
+## Disclosure {#disclosure}
 
 {{fig-smd-cwt-disclosures}} shows the disclosure of the `inspection_location` claim from
 {{fig-cwt-claimset-example}}.
@@ -350,9 +350,75 @@ following values:
 
 # Presentation {#smd-kbt}
 
+A Holder can selectively present some of the claims previously redacted inside an SMD-KBT. It has the same structure as
+a SD-KBT. The only difference here is that instead of simply filtering out the Disclosures he does not want to disclose,
+the new ones introduced by this document have to be transformed from a simple enumeration of values to a Merkle Proof.
 
+To do so in follows this procedure for a given disclosure:
+* iterate the non-decoy disclosures and select the ones to present.
+  * So in the example we iterate over leaves `A` to `E` and only present `A`, `D` and `E`
+* For each leaf, compute its proof and encode these elements in an Array
+
+
+~~~ aasvg
+                           V
+                           |
+                 .---------+---------.
+                /                     \
+               R                       S
+               |                       |
+           .---+---.               .---+---.
+          /         \             /         \
+         J           K           L           M
+        / \         / \         / \         / \
+       /   \       /   \       /   \       /   \
+      A    (B)   (C)    D     E    d     d     _
+
+Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
+
+Leaf: 0     1     2     3     4     5     6     7
+~~~
+
+{: #fig-placing-decoys title="Placing Decoys"}
+
+So for example the Merkle Proof for `A` is:
+
+~~~ cbor-diag
+[ hash<<B>>, hash<<K>>, hash<<S>> ]
+~~~
+
+{: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
+
+`D` has a common ancestor with A so its proof will:
+
+~~~ cbor-diag
+[ hash<<C>>, hash<<J>>, hash<<S>> ]
+~~~
+
+{: #fig-merkle-proof-leaf-a title="Merkle Proof of D"}
+
+# Benefits over SD-CWT
+
+## Smaller tokens
+
+TODO: logarithmically smaller
+
+## Privacy
+
+TODO: does not leak array size, does not leak Map structure
+
+## Free Decoys
+
+TODO: one can pad up to the next power of two decoys for free. Raising to the next power of two only costs one Merkle
+hash in size so 34 bytes.
+
+## Verification time
+
+TODO: the sparser the presentation the faster the verification, but a full presentation will be twice slower.
 
 # Privacy Considerations {#privacy}
+
+## Claims order is still leaked
 
 # Security Considerations {#security}
 
