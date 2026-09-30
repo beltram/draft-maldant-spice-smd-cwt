@@ -357,7 +357,14 @@ the new ones introduced by this document have to be transformed from a simple en
 To do so in follows this procedure for a given disclosure:
 * iterate the non-decoy disclosures and select the ones to present.
   * So in the example we iterate over leaves `A` to `E` and only present `A`, `D` and `E`
-* For each leaf, compute its proof and encode these elements in an Array
+* For each leaf, from left to right, compute its proof and encode these elements in an Array
+  * Build a heap to remember to node visited, you will push node indexes there
+  * Hash the leaf. Push its node index in the heap.
+  * Hash its sibling. Push its node index in the heap.
+  * Whenever you push in the heap, if the sibling of this node is already in the heap, push also the node index of the parent in the heap.
+  * Push the hash of the sibling in the proof unless it exists in the heap. If it does push the node index in the proof.
+  * Compute the hash of the parent. Push its node index in the proof unless it exists in the heap. If it does push the node index in the proof.
+  * Stop when the parent is the root
 
 
 ~~~ aasvg
@@ -372,7 +379,7 @@ To do so in follows this procedure for a given disclosure:
          J           K           L           M
         / \         / \         / \         / \
        /   \       /   \       /   \       /   \
-      A    (B)   (C)    D     E    d     d     _
+      A    (B)   (C)    D     E    d1     d2    _
 
 Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
 
@@ -385,6 +392,7 @@ So for example the Merkle Proof for `A` is:
 
 ~~~ cbor-diag
 [ hash<<B>>, hash<<K>>, hash<<S>> ]
+/ heap: [0, 2, 1, 5, 3, 11] /
 ~~~
 
 {: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
@@ -392,10 +400,19 @@ So for example the Merkle Proof for `A` is:
 `D` has a common ancestor with A so its proof will:
 
 ~~~ cbor-diag
-[ hash<<C>>, hash<<J>>, hash<<S>> ]
+[ hash<<C>>, 1, 11 ]
+/ no need to hash `J` since its 2 children (0 & 2) are in the heap /
+/ heap: [0, 2, 1, 5, 3, 11, 6, 4, 5] /
 ~~~
 
-{: #fig-merkle-proof-leaf-a title="Merkle Proof of D"}
+{: #fig-merkle-proof-leaf-d title="Merkle Proof of D"}
+
+~~~ cbor-diag
+[ hash<<d1>>, hash<<M>>, 3 ]
+/ heap: [0, 2, 1, 5, 3, 11, 6, 4, 5, 8, 10, 9, 13] /
+~~~
+
+{: #fig-merkle-proof-leaf-e title="Merkle Proof of E"}
 
 # Benefits over SD-CWT
 
