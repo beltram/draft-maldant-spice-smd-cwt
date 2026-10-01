@@ -145,6 +145,7 @@ requested, and additionally supports generating SMD-CWTs.
     }
 }
 ~~~
+
 {: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre-Issuance {#tbr-tag}
@@ -173,9 +174,11 @@ be part of a Merkle Disclosure.
     }
 }])
 ~~~
+
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
-For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of the
+For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
+the
 tagged array or map are placed at its leaves.
 
 ## Merkle Tree {#merkle-tree}
@@ -203,6 +206,7 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
+
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
 ### Placing Decoys
@@ -235,6 +239,7 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
+
 {: #fig-placing-decoys title="Placing Decoys"}
 
 In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed as follows:
@@ -270,6 +275,7 @@ redacted_root_hash = [
   bstr, ; root hash
 ]
 ~~~
+
 {: #redacted-root-hash title="Redacted Root Hash"}
 
 If the redaction occurs in a map, the root hash is placed in the `map_redacted_root_hash` claim as a Redacted Root Hash
@@ -278,6 +284,7 @@ If the redaction occurs in a map, the root hash is placed in the `map_redacted_r
 ~~~ cddl
 / map_redacted_root_hash / simple(60) : [ uint, bstr ]
 ~~~
+
 {: #map-redacted-root-hash title="Map Redacted Root Hash"}
 
 If the redaction occurs in an array, the root hash is placed in an `array_redacted_root_hash` element at the end of the
@@ -289,6 +296,7 @@ array (in the case of partial redaction).
         60([ uint, bstr ]) / root hash of item 0 and 2 /
     ],
 ~~~
+
 {: #array-redacted-root-hash title="Array Redacted Root Hash"}
 
 ## Disclosure {#disclosure}
@@ -313,6 +321,7 @@ array (in the case of partial redaction).
     ]
 ]>>
 ~~~
+
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a Disclosure is an array of all the redacted elements of a container (either a CBOR map or a CBOR
@@ -326,6 +335,7 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 ; an array of bstr-encoded Salted Disclosed Claims
 {::include ./cddl/salted-array.cddl}
 ~~~
+
 {: #cddl-salted-disclosed title="CDDL of Salted Disclosed Claims"}
 
 ## Content-Type
@@ -348,17 +358,18 @@ For a given Disclosure, the Holder proceeds as follows:
 
 1. Iterate over the non-Decoy Disclosures and select those to present. In the example of {{fig-presentation-tree}},
    leaves `A` to `E` are iterated over, and only `A`, `D`, and `E` are presented.
-2. For each selected leaf, from left to right, compute its proof and encode its elements in an array:
-   1. Maintain a heap recording the visited nodes, into which node indexes are pushed.
-   2. Hash the leaf, and push its node index into the heap.
-   3. Hash its sibling, and push its node index into the heap.
-   4. Whenever a node index is pushed into the heap, if the node index of its sibling is already in the heap, also push
-      the node index of their parent into the heap.
-   5. Push the hash of the sibling into the proof unless it is already in the heap; if it is, push its node index into
-      the proof instead.
-   6. Compute the hash of the parent. Push its node index into the proof unless it is already in the heap; if it is,
-      push its node index into the proof.
-   7. Stop when the parent is the root.
+2. Maintain a heap recording the visited nodes, into which node indexes are pushed.
+3. For each selected leaf, from left to right, compute its proof and encode its elements in an array:
+    1. Build a Merkle Disclosure with the node index of the leaf and the SMD-CWT Disclosure in the proof. Push the leaf
+       node index into the heap.
+    2. Hash its sibling and push it in the proof. Then push its node index into the heap.
+    3. Whenever a node index is pushed into the heap, if the node index of its sibling is already in the heap, also push
+       the node index of their parent into the heap.
+    4. Push the hash of the sibling into the proof unless it is already in the heap; if it is, push its node index into
+       the proof instead.
+    5. Compute the hash of the parent. Push its node index into the proof unless it is already in the heap; if it is,
+       push its node index into the proof.
+    6. Stop when the parent is the root.
 
 ~~~ aasvg
                            V
@@ -378,32 +389,83 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
 
 Leaf: 0     1     2     3     4     5     6     7
 ~~~
+
 {: #fig-presentation-tree title="Merkle Tree of a Presentation"}
 
 For example, the Merkle proof for `A` is:
 
 ~~~ cbor-diag
-[ hash<<B>>, hash<<K>>, hash<<S>> ]
+[
+  [0, h'4e2f040d5bb57daf86698066be470c24', "A"],
+  hash<<B>>,
+  hash<<K>>,
+  hash<<S>>,
+]
 / heap: [0, 2, 1, 5, 3, 11] /
 ~~~
+
 {: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
 
 `D` shares a common ancestor with `A`; its proof is therefore:
 
 ~~~ cbor-diag
-[ hash<<C>>, 1, 11 ]
+[
+  [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"],
+  hash<<C>>,
+  1,
+  11,
+]
 / no need to hash `J` since its 2 children (0 & 2) are in the heap /
 / heap: [0, 2, 1, 5, 3, 11, 6, 4, 5] /
 ~~~
+
 {: #fig-merkle-proof-leaf-d title="Merkle Proof of D"}
 
 Finally, the Merkle proof for `E` is:
 
 ~~~ cbor-diag
-[ hash<<d1>>, hash<<M>>, 3 ]
+[
+  [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"],
+  hash<<d1>>,
+  hash<<M>>,
+  3,
+]
 / heap: [0, 2, 1, 5, 3, 11, 6, 4, 5, 8, 10, 9, 13] /
 ~~~
+
 {: #fig-merkle-proof-leaf-e title="Merkle Proof of E"}
+
+Which gives the following Disclosure Proof
+
+~~~ cbor-diag
+[
+  [ [0, h'4e2f040d5bb57daf86698066be470c24', "A"], hash<<B>>, hash<<K>>, hash<<S>> ] / "A" /
+  [ [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"], hash<<C>>, 1, 11 ]                / "D" /
+  [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>>, 3 ]        / "E" /
+]
+~~~
+
+{: #fig-disclosure-proof title="Disclosure Proof"}
+
+# Verifier
+
+A SMD-CWT Verifier MUST do the same verification a SD-CWT Verifier would. We are only going to detail here how to
+validate a Disclosure Proof.
+
+1. Maintain a heap recording the visited nodes, into which node indexes are pushed.
+2. Verify that the array does not have element than the exponential of the size defined in the `redacted_root_hash` minus 1.
+3. For each element in the Disclosure proof
+   1. Verify that the same size as the one encoded in the `redacted_root_hash`
+   2. Verify that the first element of the array is a Merkle Disclosure, if not, the validation fails.
+   3. Take the Merkle Disclosure and remove the first element which is the leaf's node index. You now have a SMD-CWT Disclosure.
+   4. Hash the SMD-CWT Disclosure.
+   5. Push this node index and the hash to the heap.
+   6. Now take the next element in the array which is the sibling of the leaf. Infer its node index.
+      1. If it is a CBOR bytes, it's a hash of the sibling so take it as is.
+      2. If not, get the hash from the heap with the node index.
+   7. Compute the hash of the parent by hashing the concatenation of those 2 hashes.
+   8. Repeat until the end of the array. Finally verify that the last hash produced is the same as the one defined in the `redacted_root_hash`.
+4. If a single proof is invalid the validation fails.
 
 # Benefits over SD-CWT
 
@@ -449,7 +511,7 @@ elements: the first is the logarithmic size of the desired proof length, and the
 * Data Item: (array or map)
 * Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
   Redacted Tag defined in {{Section 17.3.1 of SD-CWT}}.
-* Specification Document(s): {{tbr-tag}} of this specification
+* Specification Document (s): {{tbr-tag}} of this specification
 
 ## Media Types
 
@@ -471,9 +533,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -498,9 +560,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -519,9 +581,11 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
+
 {: #cddl-schema title="A complete CDDL description of SD-CWT"}
 
 # Acknowledgments
+
 {:numbered="false"}
 
 TODO acknowledge.
