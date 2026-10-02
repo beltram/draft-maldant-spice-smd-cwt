@@ -367,7 +367,7 @@ For a given Disclosure, the Holder proceeds as follows:
     4. Push the hash of the sibling into the proof unless it is already in the heap; if it is, push its node index into
        the proof instead.
     5. Compute the hash of the parent. Push its node index into the proof unless it is already in the heap; if it is,
-       push its node index into the proof.
+       push its node index into the proof instead.
     6. Stop when the parent is the root.
 
 ~~~ aasvg
@@ -584,7 +584,7 @@ The following completed registration template is provided:
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
 
-{: #cddl-schema title="A complete CDDL description of SD-CWT"}
+{: #cddl-schema title="A complete CDDL description of SMD-CWT"}
 
 # Acknowledgments
 
