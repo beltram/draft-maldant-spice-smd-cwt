@@ -19,7 +19,7 @@
 # Change the file extension to match the format (.xml for XML, etc...)
 #
 ###
-title: "Selective Disclosure CBOR Web Tokens (SD-CWT)"
+title: "Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT)"
 abbrev: "SMD-CWT"
 category: std
 
