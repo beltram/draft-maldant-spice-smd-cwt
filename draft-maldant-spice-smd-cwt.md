@@ -147,7 +147,6 @@ requested and, in addition, supports the generation of SMD-CWTs.
     }
 }
 ~~~
-
 {: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre-Issuance {#tbr-tag}
@@ -176,7 +175,6 @@ to be part of a Merkle Disclosure.
     }
 }])
 ~~~
-
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
 For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
@@ -209,7 +207,6 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
-
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
 ### Placing Decoys
@@ -242,7 +239,6 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
-
 {: #fig-placing-decoys title="Placing Decoys"}
 
 In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed as follows:
@@ -283,7 +279,6 @@ redacted_root_hash = [
   bstr, ; root hash
 ]
 ~~~
-
 {: #redacted-root-hash title="Redacted Root Hash"}
 
 If the redaction occurs in a map, the root hash is placed in the `map_redacted_root_hash` claim as a Redacted Root Hash
@@ -292,7 +287,6 @@ If the redaction occurs in a map, the root hash is placed in the `map_redacted_r
 ~~~ cddl
 / map_redacted_root_hash / simple(60) : [ uint, bstr ]
 ~~~
-
 {: #map-redacted-root-hash title="Map Redacted Root Hash"}
 
 If the redaction occurs in an array, the root hash is placed in an `array_redacted_root_hash` element at the end of the
@@ -304,7 +298,6 @@ array (in the case of partial redaction).
     60([ uint, bstr ]) / root hash of item 0 and 2 /
 ],
 ~~~
-
 {: #array-redacted-root-hash title="Array Redacted Root Hash"}
 
 ## Disclosure {#disclosure}
@@ -329,7 +322,6 @@ array (in the case of partial redaction).
     ]
 ]>>
 ~~~
-
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a Disclosure is an array of all redacted elements of a container (either a CBOR map or a CBOR array).
@@ -343,7 +335,6 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 ; an array of bstr-encoded Salted Disclosed Claims
 {::include ./cddl/salted-array.cddl}
 ~~~
-
 {: #cddl-salted-disclosed title="CDDL of Salted Disclosed Claims"}
 
 ## Content-Type
@@ -563,7 +554,7 @@ the Disclosure Proof, in the Merkle proof of the leftmost presented leaf (see {{
 TODO: The sparser the presentation, the faster the verification; however, a full presentation takes twice as long to
 verify.
 
-# Privacy Considerations {#privacy}
+# Privacy Considerations {#privacy-considerations}
 
 ## Leakage of Claim Order
 
@@ -657,11 +648,9 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
-
 {: #cddl-schema title="A complete CDDL description of SMD-CWT"}
 
 # Acknowledgments
-
 {:numbered="false"}
 
 TODO acknowledge.
