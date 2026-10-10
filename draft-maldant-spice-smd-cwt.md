@@ -50,6 +50,7 @@ author:
 
 normative:
   SD-CWT: I-D.draft-ietf-spice-sd-cwt-08
+  RFC9162: CT
 
 informative:
 
@@ -67,8 +68,7 @@ claims are presented with a Merkle proof.
 
 # Introduction {#intro}
 
-This document defines Selective Merkle Disclosure CBOR Web Tokens
-(SMD-CWT), an extension to SD-CWT {{SD-CWT}}.
+This document defines Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT), an extension to SD-CWT {{SD-CWT}}.
 
 SD-CWT provides an efficient mechanism by which a Holder controls which
 claims it presents to a Verifier, thereby improving the privacy of the
@@ -106,6 +106,9 @@ Selective Merkle Disclosure CBOR Web Token (SMD-CWT):
 
 Selective Merkle Disclosure Key Binding Token (SMD-KBT):
 : An SD-KBT used to demonstrate possession of a confirmation method and to present claims with a Merkle proof.
+
+Copath:
+: In a Merkle Tree for a given leaf, all the nodes alongside the inclusion proof of that leaf.
 
 All other terms used in this document have the meaning defined in {{SD-CWT}}.
 
@@ -181,11 +184,13 @@ the tagged array or map are placed at its leaves.
 
 ## Merkle Tree {#merkle-tree}
 
-This specification is restricted to binary Merkle trees, as a higher branching factor provides neither additional
-benefit nor the desired properties.
+This specification reuses binary Merkle trees as defined in {{Section 2.1.1 of !RFC9162}}. The arity of this Merkle Tree
+is 2. A higher branching factor provides neither additional benefit nor the desired properties.
 
-The Merkle tree is left-balanced. Unbalanced trees are not used, as they are vulnerable to forgery attacks; moreover, a
-left-balanced tree minimizes the number of required Decoys. {{fig-merkle-tree-example}} shows an example.
+The Merkle tree is left-balanced and complete. Unbalanced trees are not used, as they are vulnerable to forgery attacks;
+moreover, a left-balanced tree minimizes the number of required Decoys. {{fig-merkle-tree-example}} shows an example.
+Also, a binary tree is easier to represent in memory and their indices are easier to compute as explained in {{Appendix
+C of !RFC9420}}.
 
 ~~~ aasvg
               root
@@ -212,7 +217,7 @@ Leaf: 0     1     2     3
 A Merkle tree MUST contain at least one Decoy. If the number of entries in the tree is a power of 2, the tree MUST be
 grown.
 
-Then, for each node in the copath of the rightmost entry, the leftmost blank leaf of the subtree rooted at that node
+Then, for each node in the Copath of the rightmost entry, the leftmost blank leaf of the subtree rooted at that node
 MUST be replaced with a Decoy.
 
 ~~~ aasvg
@@ -248,7 +253,7 @@ In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed 
    that is itself a leaf, such as `18`, is replaced directly.
 4. Consequently, nodes `18`, `20`, and `24` are replaced with Decoys.
 
-## Computing the Merkle Root
+## Computing the Merkle Root Hash
 
 The Issuer then computes the root hash of the Merkle tree as follows:
 
@@ -256,7 +261,12 @@ The Issuer then computes the root hash of the Merkle tree as follows:
 2. The resulting bytes are hashed using the hash algorithm indicated by `sd_alg`.
 3. The hash of a parent node is the hash of its two children.
 
-### Inserting the Root Hash
+We define this operation as `MTH` for Merkle Tree Hash, similarly to the one described in {{Section 2.1.1 of !RFC9162}}.
+Note that contrary to {{!RFC9162}}, we do not add a domain separation prefix to the leaves and the nodes for the simple
+reason that our tree is balanced and its size is authenticated by the issuer. So each Inclusion Proof length must be the
+same and so a second preimage resistance is not necessary as a node `MTH` cannot be used as a leaf one.
+
+### Inserting the Merkle Root Hash in the payload
 
 The root hash is then inserted into the original payload in place of the redacted claims. These claims are declared
 within a container, which is either a map or an array. Since the container itself is annotated with the To Be Redacted
@@ -290,9 +300,9 @@ array (in the case of partial redaction).
 
 ~~~ cddl
 "inspection_dates" : [
-        1612498440, / item 1 not redacted /
-        60([ uint, bstr ]) / root hash of item 0 and 2 /
-    ],
+    1612498440, / item 1 not redacted /
+    60([ uint, bstr ]) / root hash of item 0 and 2 /
+],
 ~~~
 
 {: #array-redacted-root-hash title="Array Redacted Root Hash"}
@@ -360,15 +370,12 @@ For a given Disclosure, the Holder proceeds as follows:
 3. For each selected leaf, from left to right, compute its proof and encode its elements in an array:
     1. Build a Merkle Disclosure from the node index of the leaf and the SMD-CWT Disclosure, and place it in the proof.
        Push the node index of the leaf into the heap.
-    2. Hash the sibling of the leaf and push the hash into the proof. Then push the node index of the sibling into the
-       heap.
-    3. Whenever a node index is pushed into the heap, if the node index of its sibling is already in the heap, also push
-       the node index of their parent into the heap.
-    4. Push the hash of the sibling into the proof unless it is already in the heap; if it is, push its node index into
-       the proof instead.
-    5. Compute the hash of the parent. Push its node index into the proof unless it is already in the heap; if it is,
-       push its node index into the proof instead.
-    6. Stop when the parent is the root.
+    2. Compute the copath from that leaf and for each node on the copath:
+        1. Verify if it's node index already exists on the heap. If it does abort, you are done for that leaf. If it
+           does not, push its node index into the heap. If the sibling of that node is already in the heap, push the
+           parent node index into the heap.
+        2. If that node is a leaf, hash it. Else, the hash of that node is the hash of the concatenation the hash of its
+           children. Push the result in the proof.
 
 ~~~ aasvg
                            V
@@ -411,8 +418,6 @@ For example, the Merkle proof for `A` is:
 [
   [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"],
   hash<<C>>,
-  1,
-  11,
 ]
 / no need to hash `J` since its 2 children (0 & 2) are in the heap /
 / heap: [0, 2, 1, 5, 3, 11, 6, 4, 5] /
@@ -427,7 +432,6 @@ Finally, the Merkle proof for `E` is:
   [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"],
   hash<<d1>>,
   hash<<M>>,
-  3,
 ]
 / heap: [0, 2, 1, 5, 3, 11, 6, 4, 5, 8, 10, 9, 13] /
 ~~~
@@ -439,8 +443,8 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}.
 ~~~ cbor-diag
 [
   [ [0, h'4e2f040d5bb57daf86698066be470c24', "A"], hash<<B>>, hash<<K>>, hash<<S>> ] / "A" /
-  [ [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"], hash<<C>>, 1, 11 ]                / "D" /
-  [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>>, 3 ]        / "E" /
+  [ [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"], hash<<C>> ]                       / "D" /
+  [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>> ]           / "E" /
 ]
 ~~~
 
@@ -451,22 +455,22 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}.
 An SMD-CWT Verifier MUST perform the same verification as an SD-CWT Verifier. This section only describes how to
 validate a Disclosure Proof.
 
-1. Maintain a heap recording the visited nodes, into which node indexes are pushed.
+1. Maintain a heap recording the visited nodes containing the node indexes and their hashes.
 2. Verify that the array does not contain more than 2^n - 1 elements, where n is the size encoded in the
    `redacted_root_hash`.
 3. For each element of the Disclosure Proof:
-   1. Verify that its size is the same as the size encoded in the `redacted_root_hash` plus 1.
-   2. Verify that the first element of the array is a Merkle Disclosure; if it is not, the validation fails.
-   3. Remove the first element of the Merkle Disclosure, which is the node index of the leaf. The result is an SMD-CWT
-      Disclosure.
-   4. Hash the SMD-CWT Disclosure.
-   5. Push the node index and the hash into the heap.
-   6. Take the next element of the array, which is the sibling of the leaf, and infer its node index:
-      1. If it is a CBOR byte string, it is the hash of the sibling and is used as is.
-      2. Otherwise, retrieve the hash from the heap using the node index.
-   7. Compute the hash of the parent by hashing the concatenation of these two hashes.
-   8. Repeat until the end of the array is reached. Finally, verify that the last computed hash is equal to the root
-      hash in the `redacted_root_hash`.
+    1. Verify that its size is less or equal to the size encoded in the `redacted_root_hash` plus 1.
+    2. Verify that the first element of the array is a Merkle Disclosure; if it is not, the validation fails.
+    3. Pop the first element of the Merkle Disclosure. It is the node index of the leaf. The result array is an SMD-CWT
+       Disclosure. Hash it. Then compute the copath of that leaf.
+    4. Push the node index and the hash into the heap.
+    5. Then for each remaining element in the copath:
+        1. If the node index does not exist in the proof, get it from the heap. If it does not exist there abort the
+           whole validation. Else, take the hash from the proof.
+        2. Concatenate that hash with the output of previous iteration. Hash this concatenation. Push in on the heap
+           with the parent of the current node index
+        3. Repeat until the end of the array is reached. Finally, verify that the last computed hash is equal to the
+           root hash in the `redacted_root_hash`.
 4. If any single proof is invalid, the validation fails.
 
 # Benefits over SD-CWT
@@ -481,8 +485,13 @@ TODO: Does not leak the array size; does not leak the map structure.
 
 ## Free Decoys
 
-TODO: Decoys can be added at no cost, up to the next power of two. Increasing the size to the next power of two costs
-only one Merkle hash, i.e., 34 bytes.
+In SD-CWT, each Decoy adds one hash, i.e., 34 bytes, to the presented token.
+
+In SMD-CWT, the presented token contains only the root hash and the Merkle proofs of the disclosed claims. The size of
+these proofs depends on the height of the tree, not on the number of its leaves. Decoys can therefore be added at no
+cost up to the next power of two. Beyond that, doubling the number of leaves adds one level to the tree, which costs
+only one additional hash, i.e., 34 bytes: the new copath node is shared by all Merkle proofs and is therefore
+referenced by its node index in all but the first one.
 
 ## Verification Time
 
@@ -513,7 +522,7 @@ elements: the first is the logarithmic size of the desired proof length, and the
 * Data Item: (array or map)
 * Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
   Redacted Tag defined in {{Section 17.3.1 of SD-CWT}}.
-* Specification Document(s): {{tbr-tag}} of this specification
+* Specification Document (s): {{tbr-tag}} of this specification
 
 ## Media Types
 
@@ -535,9 +544,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -562,9 +571,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
