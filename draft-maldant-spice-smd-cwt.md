@@ -213,11 +213,8 @@ Leaf: 0     1     2     3
 
 ### Placing Decoys {#placing-decoys}
 
-A Merkle tree MUST contain at least one Decoy. If the number of entries in the tree is a power of 2, the tree MUST be
-grown.
-
-Then, for each node in the Copath of the rightmost entry, the leftmost blank leaf of the subtree rooted at that node
-MUST be replaced with a Decoy.
+For each node in the Copath of the rightmost leaf, the leftmost blank leaf of the subtree rooted at that node MUST be
+replaced with a Decoy. When the entries fill all the leaves of the tree, no Decoy is added.
 
 ~~~ aasvg
                                                    X
@@ -467,7 +464,7 @@ size encoded in the `redacted_root_hash`; the Merkle tree therefore has 2^n leav
 
 The Verifier proceeds as follows:
 
-1. Verify that the Disclosure Proof contains at least one and at most 2^n - 1 Merkle proofs.
+1. Verify that the Disclosure Proof contains at least one and at most 2^n Merkle proofs.
 2. For each Merkle proof:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
@@ -523,7 +520,7 @@ In SD-CWT, the payload contains the hash of every redacted entry, disclosed or n
 costs 34 * e bytes in every presentation (assuming `sd_alg` is SHA-256).
 
 In SMD-CWT, the payload contains a single Redacted Root Hash per container, and a presentation adds the node index of
-each of the k presented leaves and h hashes, where 2^n >= e + 1 and:
+each of the k presented leaves and h hashes, where 2^n >= e and:
 
 * h <= k * n, since each Merkle proof contains at most n hashes;
 * h <= 2^n - k, since each hash covers a distinct subtree containing no presented leaf.
@@ -537,7 +534,7 @@ instance, the Disclosure Proof of {{fig-disclosure-proof}} contains 4 hashes in 
 In SD-CWT, the payload contains one hash per redacted entry, so a Verifier learns the number of redacted entries of each
 container, Decoys included, and, for an array, the positions of its redacted elements.
 
-In SMD-CWT, the Verifier only learns the size n of the tree, i.e., that the container has at most 2^n - 1 redacted
+In SMD-CWT, the Verifier only learns the size n of the tree, i.e., that the container has at most 2^n redacted
 entries. The Issuer can choose a larger n to hide this number further, at the cost of at most one hash per additional
 level (see {{free-decoys}}).
 
