@@ -364,10 +364,7 @@ Covered node:
 : A node of the Merkle tree whose subtree contains at least one presented leaf. A presented leaf is itself covered.
 
 Anchor:
-: For a presented leaf, its smallest common ancestor with the presented leaves on its left, i.e., the lowest node
-  whose subtree contains both that leaf and at least one presented leaf with a smaller node index. Since node indexes
-  increase from left to right, the Anchor of a presented leaf is its smallest common ancestor with the presented leaf
-  immediately preceding it. The leftmost presented leaf has no Anchor.
+: For a presented leaf, it is the smallest common ancestor between the presented leaf and the rest of the presented leaves.
 
 For a given Disclosure, the Holder proceeds as follows:
 
@@ -379,28 +376,9 @@ For a given Disclosure, the Holder proceeds as follows:
     1. Build a Merkle Disclosure from the node index of the leaf and the SMD-CWT entry, and place it as the first
        element of the Merkle proof.
     2. Walk the copath of that leaf, from the leaf up to the root. For each node of the copath:
-        1. If the parent of that node is the Anchor of the leaf, stop: the node is a child of the Anchor, it is
-           covered, and the Verifier recomputes its hash from the Merkle proof of a preceding presented leaf.
-        2. Otherwise, if that node is covered, skip it and continue with the next node of the copath. Such a node is
-           necessarily on the right of the leaf, and the Verifier recomputes its hash from the Merkle proof of a
-           subsequent presented leaf.
-        3. Otherwise, append the hash of that node to the Merkle proof. If that node is a leaf, its hash is the hash of
-           its entry, computed as described in {{merkle-root-hash}}. Otherwise, its hash is the `MTH` of
-           the subtree rooted at that node.
-    3. The leftmost selected leaf has no Anchor: its walk ends after the last node of its copath, i.e., the child of
-       the root.
+        1. It this node is a children of the Anchor stop.
+        2. Otherwise, append the hash of the Merkle Disclosure of that node to the Merkle proof.
 4. The Disclosure Proof is the array of the Merkle proofs, ordered by increasing node index of their leaf.
-
-Equivalently, the walk of step 3.2 stops at the first node of the copath that is covered and located on the left of the
-leaf, and skips the nodes of the copath that are covered and located on the right of the leaf.
-
-As a result, the only hashes included in a Disclosure Proof are those of the nodes that are not covered and whose
-sibling is covered. Each of them is included exactly once, in the Merkle proof of the leftmost presented leaf of the
-subtree rooted at its sibling. The more leaves are presented, the fewer hashes are required. In particular, when all
-the non-Decoy entries are presented, the only hashes included are those of the nodes of the copath of the rightmost
-entry that are located on its right, i.e., the subtrees containing only Decoys and blank leaves: at most n hashes,
-where n is the size encoded in the `redacted_root_hash`. Apart from these hashes, such a Disclosure Proof only contains
-the presented entries and their node indexes.
 
 ~~~ aasvg
                            V
