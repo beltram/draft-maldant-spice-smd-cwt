@@ -182,7 +182,9 @@ the tagged array or map are placed at its leaves.
 
 ## Merkle Tree {#merkle-tree}
 
-This specification reuses binary Merkle trees as defined in {{Section 2.1.1 of !RFC9162}}. The arity of this Merkle Tree
+This specification uses binary Merkle trees similar to those defined in {{Section 2.1.1 of !RFC9162}}, with one
+differences: no
+domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). The arity of this Merkle Tree
 is 2. A higher branching factor provides neither additional benefit nor the desired properties.
 
 The Merkle tree is left-balanced and complete. Unbalanced trees are not used, as they are vulnerable to forgery attacks;
@@ -470,6 +472,9 @@ The Verifier proceeds as follows:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
        node index of a leaf, i.e., an even number less than or equal to 2^(n+1) - 2.
+    3. Verify that this Merkle Disclosure matches the type of the container: a `merkle-salted-claim` if the container
+       is a map, or a `merkle-salted-element` if it is an array, as defined in {{cddl-salted-disclosed}}. In
+       particular, a Merkle Disclosure of a Decoy, which only contains a salt, is rejected.
 3. Verify that the node indexes of the Merkle Disclosures are strictly increasing from the first Merkle proof to the
    last one.
 4. From these node indexes, compute the Anchor of each presented leaf, as defined in {{smd-kbt}}. If the Disclosure
