@@ -60,8 +60,9 @@ informative:
 
 This document specifies an extension to Selective Disclosure CBOR Web
 Tokens (SD-CWT) that reduces their size and improves their privacy
-properties. In this extension, the individual hashes of redacted claims
-are replaced with the root hash of a single Merkle tree, and disclosed
+properties. In this extension, the individual hashes of the redacted
+claims of a map or an array are replaced with the root hash of a Merkle
+tree, and disclosed
 claims are presented with a Merkle proof.
 
 --- middle
@@ -80,7 +81,7 @@ itself is not disclosed to the Verifier.
 
 To address both issues, this document specifies that, rather than hashing
 each claim individually and placing the resulting hashes in a CBOR array,
-the claims are placed in a Merkle tree and only the root hash of that tree
+the claims of each map or array are placed in a Merkle tree and only the root hash of that tree
 is included in the SD-CWT. A presentation of the token then includes only
 a Merkle proof attesting to the integrity of the disclosed claims. The
 size of this proof is logarithmic in the number of claims, whereas the
@@ -117,7 +118,8 @@ All other terms used in this document have the meaning defined in {{SD-CWT}}.
 SMD-CWT is an extension of SD-CWT: every SD-CWT is a valid SMD-CWT, but an SMD-CWT is not necessarily a valid
 SD-CWT. The two differ only in the way redacted claims are authenticated and presented.
 
-An SD-CWT Issuer enumerates the hashes of all claims in a CBOR array or map. In contrast, an SMD-CWT Issuer places
+An SD-CWT Issuer enumerates the hashes of all redacted claims, either in the `redacted_claim_keys` array of a map, or in
+place of the redacted elements of an array. In contrast, an SMD-CWT Issuer places
 these hashes at the leaves of a left-balanced Merkle tree and replaces the set of claims in the original payload with
 the root hash of that tree.
 
@@ -183,12 +185,10 @@ the tagged array or map are placed at its leaves.
 ## Merkle Tree {#merkle-tree}
 
 This specification uses binary Merkle trees similar to those defined in {{Section 2.1.1 of !RFC9162}}, with one
-differences: no
-domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). The arity of this Merkle Tree
+difference: no domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). The arity of this Merkle Tree
 is 2. A higher branching factor provides neither additional benefit nor the desired properties.
 
-The Merkle tree is left-balanced and complete. Unbalanced trees are not used, as they are vulnerable to forgery attacks;
-moreover, a left-balanced tree minimizes the number of required Decoys. {{fig-merkle-tree-example}} shows an example.
+The Merkle tree is left-balanced and complete. Unbalanced trees are not used, as they are vulnerable to forgery attacks. {{fig-merkle-tree-example}} shows an example.
 Also, a binary tree is easier to represent in memory and their indices are easier to compute as explained in {{Appendix
 C of !RFC9420}}.
 
@@ -527,7 +527,7 @@ each of the k presented leaves and h hashes, where 2^n >= e and:
 
 The size of a presentation therefore grows linearly with e in SD-CWT, but only logarithmically in SMD-CWT. For
 instance, the Disclosure Proof of {{fig-disclosure-proof}} contains 4 hashes in addition to the root hash, i.e.,
-34 * 5 = 170 bytes, whereas an SD-CWT with the same 7 entries and Decoys contains 34 * 7 = 238 bytes of hashes.
+34 * 5 = 170 bytes, whereas an SD-CWT with the same 5 entries and 2 Decoys contains 34 * 7 = 238 bytes of hashes.
 
 ## Privacy
 
@@ -576,7 +576,8 @@ IANA is requested to register the following tag in the
 ### To Be Redacted Root Tag {#tbrrt}
 
 This tag identifies an array or map containing elements to be redacted. The value of this tag is an array of two
-elements: the first is the logarithmic size of the desired proof length, and the second is the wrapped array or map.
+elements: the first is the base-2 logarithm of the number of leaves of the Merkle tree, i.e., the maximum number of hashes in a
+Merkle proof, and the second is the wrapped array or map.
 
 * Tag: TBD2 (suggested 59)
 * Data Item: (array or map)
