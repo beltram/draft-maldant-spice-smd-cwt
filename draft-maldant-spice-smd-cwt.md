@@ -471,41 +471,43 @@ The Verifier proceeds as follows:
        node index of a leaf, i.e., an even number less than or equal to 2^(n+1) - 2.
 3. Verify that the node indexes of the Merkle Disclosures are strictly increasing from the first Merkle proof to the
    last one.
-4. From these node indexes, determine the covered nodes and the Anchor of each presented leaf, as defined in
-   {{smd-kbt}}.
+4. From these node indexes, compute the Anchor of each presented leaf, as defined in {{smd-kbt}}. If the Disclosure
+   Proof contains a single Merkle proof, its leaf has no Anchor.
 5. Maintain a table associating node indexes with hashes, initially empty.
-6. Process the Merkle proofs from the last one to the first one, i.e., from the rightmost presented leaf to the
-   leftmost one. For each Merkle proof:
+6. For each Merkle proof:
     1. Remove the node index from the Merkle Disclosure. The remaining array is an SMD-CWT entry: compute its hash as
        described in {{merkle-root-hash}}. This is the current hash, and the leaf is the current node.
     2. Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:
-        1. If the parent of that node is the Anchor of the leaf, record the current hash for the current node in the
-           table, and stop the walk.
-        2. Otherwise, if that node is covered, it is located on the right of the leaf: take its hash from the table.
-           This hash has necessarily been recorded while processing a Merkle proof located after the current one.
-        3. Otherwise, take the next hash of the Merkle proof. If the Merkle proof has no hash left, the validation
+        1. If this node is a child of the Anchor of the leaf, stop the walk.
+        2. Otherwise, take the next hash of the Merkle proof. If the Merkle proof has no hash left, the validation
            fails.
-        4. Hash the concatenation of the current hash and the hash obtained in the previous step, the hash of the left
+        3. Hash the concatenation of the current hash and the hash taken from the Merkle proof, the hash of the left
            child coming first: if the node index of the current node is smaller than the node index of the copath
            node, the current hash comes first; otherwise, it comes second. The result becomes the current hash, and
            the parent of the current node becomes the current node.
     3. Verify that all the hashes of the Merkle proof have been consumed. If not, the validation fails.
-7. The walk of the first Merkle proof, whose leaf has no Anchor, ends at the root. Verify that its final current hash is
-   equal to the root hash in the `redacted_root_hash`.
-8. If any of these verifications fails, the validation of the whole Disclosure Proof fails.
+    4. Record the current hash for the current node in the table. The current node is the child of the Anchor on the
+       side of the leaf, or the root if the leaf has no Anchor.
+7. While the table contains two nodes that are siblings, remove both of them from the table, hash the concatenation
+   of their hashes, the hash of the left sibling coming first, and record the result for their parent in the table.
+8. Verify that the table contains a single node, that this node is the root, and that its hash is equal to the root
+   hash in the `redacted_root_hash`.
+9. If any of these verifications fails, the validation of the whole Disclosure Proof fails.
 
-Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the Verifier determines that the Anchor of `D` is `R` and
-the Anchor of `E` is `V`, then:
+Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the Verifier determines that the Anchor of `A` is `R`
+(node 3), the Anchor of `D` is `R` (node 3), and the Anchor of `E` is `V` (node 7), then:
 
-1. Processes the Merkle proof of `E`: it combines `hash<<E>>` with `hash<<d1>>` to obtain `hash<<L>>`, then with
-   `hash<<M>>` to obtain `hash<<S>>`. The next copath node, `R`, is a child of `V`, the Anchor of `E`: `hash<<S>>` is
-   recorded for node 11.
+1. Processes the Merkle proof of `A`: it combines `hash<<A>>` with `hash<<B>>` to obtain `hash<<J>>`. The next copath
+   node, `K`, is a child of `R`, the Anchor of `A`: `hash<<J>>` is recorded for node 1.
 2. Processes the Merkle proof of `D`: it combines `hash<<C>>` with `hash<<D>>` to obtain `hash<<K>>`. The next copath
    node, `J`, is a child of `R`, the Anchor of `D`: `hash<<K>>` is recorded for node 5.
-3. Processes the Merkle proof of `A`: it combines `hash<<A>>` with `hash<<B>>` to obtain `hash<<J>>`, then with
-   `hash<<K>>` taken from the table to obtain `hash<<R>>`, then with `hash<<S>>` taken from the table to obtain
-   `hash<<V>>`.
-4. Verifies that `hash<<V>>` is equal to the root hash in the `redacted_root_hash`.
+3. Processes the Merkle proof of `E`: it combines `hash<<E>>` with `hash<<d1>>` to obtain `hash<<L>>`, then with
+   `hash<<M>>` to obtain `hash<<S>>`. The next copath node, `R`, is a child of `V`, the Anchor of `E`: `hash<<S>>` is
+   recorded for node 11.
+4. Combines the siblings `J` (node 1) and `K` (node 5) into `hash<<R>>`, recorded for node 3, then the siblings `R`
+   (node 3) and `S` (node 11) into `hash<<V>>`, recorded for node 7.
+5. Verifies that the table only contains node 7, the root, and that `hash<<V>>` is equal to the root hash in the
+   `redacted_root_hash`.
 
 # Benefits over SD-CWT
 
