@@ -209,7 +209,7 @@ Leaf: 0     1     2     3
 ~~~
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
-### Placing Decoys
+### Placing Decoys {#placing-decoys}
 
 A Merkle tree MUST contain at least one Decoy. If the number of entries in the tree is a power of 2, the tree MUST be
 grown.
@@ -514,13 +514,34 @@ Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the Verifier determ
 
 ## Smaller Tokens
 
-TODO: Logarithmically smaller.
+In SD-CWT, the payload contains the hash of every redacted entry, disclosed or not: a container with e redacted entries
+costs 34 * e bytes in every presentation (assuming `sd_alg` is SHA-256).
+
+In SMD-CWT, the payload contains a single Redacted Root Hash per container, and a presentation adds the node index of
+each of the k presented leaves and h hashes, where 2^n >= e + 1 and:
+
+* h <= k * n, since each Merkle proof contains at most n hashes;
+* h <= 2^n - k, since each hash covers a distinct subtree containing no presented leaf.
+
+The size of a presentation therefore grows linearly with e in SD-CWT, but only logarithmically in SMD-CWT. For
+instance, the Disclosure Proof of {{fig-disclosure-proof}} contains 4 hashes in addition to the root hash, i.e.,
+34 * 5 = 170 bytes, whereas an SD-CWT with the same 7 entries and Decoys contains 34 * 7 = 238 bytes of hashes.
 
 ## Privacy
 
-TODO: Does not leak the array size; does not leak the map structure.
+In SD-CWT, the payload contains one hash per redacted entry, so a Verifier learns the number of redacted entries of each
+container, Decoys included, and, for an array, the positions of its redacted elements.
 
-## Free Decoys
+In SMD-CWT, the Verifier only learns the size n of the tree, i.e., that the container has at most 2^n - 1 redacted
+entries. The Issuer can choose a larger n to hide this number further, at the cost of at most one hash per additional
+level (see {{free-decoys}}).
+
+A presentation reveals the positions of the presented leaves and, since Decoys are placed on the right of the rightmost
+entry (see {{placing-decoys}}), a lower bound on the number of entries (see {{claim-order}}). The hashes of a Merkle
+proof reveal nothing more: their number only depends on these positions and on n, and since entries and Decoys are
+salted, a hash does not reveal what its subtree contains.
+
+## Free Decoys {#free-decoys}
 
 In SD-CWT, each Decoy adds one hash, i.e., 34 bytes, to the presented token.
 
@@ -537,7 +558,7 @@ verify.
 
 # Privacy Considerations {#privacy-considerations}
 
-## Leakage of Claim Order
+## Leakage of Claim Order {#claim-order}
 
 # Security Considerations {#security}
 
