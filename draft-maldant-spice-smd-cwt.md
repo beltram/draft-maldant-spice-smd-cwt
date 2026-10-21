@@ -62,8 +62,7 @@ This document specifies an extension to Selective Disclosure CBOR Web
 Tokens (SD-CWT) that reduces their size and improves their privacy
 properties. In this extension, the individual hashes of the redacted
 claims of a map or an array are replaced with the root hash of a Merkle
-tree, and disclosed
-claims are presented with a Merkle proof.
+tree, and disclosed claims are presented with a Merkle proof.
 
 --- middle
 
