@@ -210,7 +210,7 @@ Leaf: 0     1     2     3
 ~~~
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
-### Placing Decoys {#placing-decoys}
+### Decoys {#decoys}
 
 For each node in the Copath of the rightmost leaf, the leftmost blank leaf of the subtree rooted at that node MUST be
 replaced with a Decoy. When the entries fill all the leaves of the tree, no Decoy is added.
@@ -251,7 +251,7 @@ In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed 
 
 The Issuer then computes the root hash of the Merkle tree as follows:
 
-1. Each entry is encoded as a `bstr-encoded-merkle-salted`, as defined in {{cddl-salted-disclosed}}.
+1. Each entry is encoded as a `bstr-encoded-salted-merkle`, as defined in {{cddl-salted-disclosed}}.
 2. The resulting bytes are hashed using the hash algorithm indicated by `sd_alg`.
 3. The hash of a parent node is the hash of its two children.
 
@@ -468,8 +468,8 @@ The Verifier proceeds as follows:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
        node index of a leaf, i.e., an even number less than or equal to 2^(n+1) - 2.
-    3. Verify that this Merkle Disclosure matches the type of the container: a `merkle-salted-claim` if the container
-       is a map, or a `merkle-salted-element` if it is an array, as defined in {{cddl-salted-disclosed}}. In
+    3. Verify that this Merkle Disclosure matches the type of the container: a `salted-merkle-claim` if the container
+       is a map, or a `salted-merkle-element` if it is an array, as defined in {{cddl-salted-disclosed}}. In
        particular, a Merkle Disclosure of a Decoy, which only contains a salt, is rejected.
 3. Verify that the node indexes of the Merkle Disclosures are strictly increasing from the first Merkle proof to the
    last one.
@@ -538,7 +538,7 @@ entries. The Issuer can choose a larger n to hide this number further, at the co
 level (see {{free-decoys}}).
 
 A presentation reveals the positions of the presented leaves and, since Decoys are placed on the right of the rightmost
-entry (see {{placing-decoys}}), a lower bound on the number of entries (see {{claim-order}}). The hashes of a Merkle
+entry (see {{decoys}}), a lower bound on the number of entries (see {{claim-order}}). The hashes of a Merkle
 proof reveal nothing more: their number only depends on these positions and on n, and since entries and Decoys are
 salted, a hash does not reveal what its subtree contains.
 
@@ -621,7 +621,7 @@ The following completed registration template is provided:
 The following completed registration template is provided:
 
 * Type name: application
-* Subtype name: kb+cwt
+* Subtype name: smd-kbt
 * Required parameters: n/a
 * Optional parameters: n/a
 * Encoding considerations: binary
