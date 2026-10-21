@@ -62,7 +62,7 @@ This document specifies an extension to Selective Disclosure CBOR Web
 Tokens (SD-CWT) that reduces their size and improves their privacy
 properties. In this extension, the individual hashes of the redacted
 claims of a map or an array are replaced with the root hash of a Merkle
-tree, and disclosed claims are presented with a Merkle proof.
+tree, and disclosed claims are presented with a Merkle inclusion proof.
 
 --- middle
 
@@ -72,8 +72,8 @@ This document defines Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT), an 
 
 SD-CWT provides an efficient mechanism by which a Holder controls which
 claims it presents to a Verifier, thereby improving the privacy of the
-Holder. However, when only a subset of the claims is disclosed, the
-Verifier still learns the total number of claims, which reduces the
+Holder. However, when the presentation is sparse and only a subset of the claims is disclosed, a
+Verifier learns the total number of claims, reducing the
 privacy benefit of selective disclosure. Furthermore, each redacted claim
 adds 34 bytes to the presented token (SD-KBT), even though the claim
 itself is not disclosed to the Verifier.
@@ -82,7 +82,7 @@ To address both issues, this document specifies that, rather than hashing
 each claim individually and placing the resulting hashes in a CBOR array,
 the claims of each map or array are placed in a Merkle tree and only the root hash of that tree
 is included in the SD-CWT. A presentation of the token then includes only
-a Merkle proof attesting to the integrity of the disclosed claims. The
+a Merkle inclusion proof attesting to the integrity of the disclosed claims. The
 size of this proof is logarithmic in the number of claims, whereas the
 size of an enumeration of all redacted claims is linear in that number.
 
