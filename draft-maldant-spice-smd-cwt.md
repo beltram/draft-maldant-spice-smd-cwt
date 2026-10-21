@@ -62,7 +62,7 @@ This document specifies an extension to Selective Disclosure CBOR Web
 Tokens (SD-CWT) that reduces their size and improves their privacy
 properties. In this extension, the individual hashes of the redacted
 claims of a map or an array are replaced with the root hash of a Merkle
-tree, and disclosed claims are presented with a Merkle inclusion proof.
+tree, and disclosed claims are presented with a Merkle proof.
 
 --- middle
 
@@ -82,7 +82,7 @@ To address both issues, this document specifies that, rather than hashing
 each claim individually and placing the resulting hashes in a CBOR array,
 the claims of each map or array are placed in a Merkle tree and only the root hash of that tree
 is included in the SD-CWT. A presentation of the token then includes only
-a Merkle inclusion proof attesting to the integrity of the disclosed claims. The
+a Merkle proof attesting to the integrity of the disclosed claims. The
 size of this proof is logarithmic in the number of claims, whereas the
 size of an enumeration of all redacted claims is linear in that number.
 
@@ -114,13 +114,12 @@ All other terms used in this document have the meaning defined in {{SD-CWT}}.
 
 # Overview
 
-SMD-CWT is an extension of SD-CWT: every SD-CWT is a valid SMD-CWT, but an SMD-CWT is not necessarily a valid
-SD-CWT. The two differ only in the way redacted claims are authenticated and presented.
+SMD-CWT is an extension of SD-CWT: every SD-CWT is a valid SMD-CWT, but an SMD-CWT is not necessarily a valid SD-CWT.
+The two differ only in the way redacted claims are authenticated and presented.
 
 An SD-CWT Issuer enumerates the hashes of all redacted claims, either in the `redacted_claim_keys` array of a map, or in
-place of the redacted elements of an array. In contrast, an SMD-CWT Issuer places
-these hashes at the leaves of a left-balanced Merkle tree and replaces the set of claims in the original payload with
-the root hash of that tree.
+place of the redacted elements of an array. In contrast, an SMD-CWT Issuer places these hashes at the leaves of a
+left-balanced Merkle tree and replaces the set of claims in the original payload with the root hash of that tree.
 
 A Holder then selectively presents claims to a Verifier in an SMD-KBT by replacing the disclosed claims with proofs of
 their inclusion in the Merkle tree. The root hash of that tree is authenticated by the Issuer in the SMD-CWT.
@@ -148,15 +147,18 @@ requested and, in addition, supports the generation of SMD-CWTs.
     }
 }
 ~~~
+
 {: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre-Issuance {#tbr-tag}
 
-An SMD-CWT Issuer MUST support the To Be Redacted Tag and the To Be Decoy Tag, both of which are defined in
+An SMD-CWT Issuer MUST support the `To Be Redacted Tag` and the `To Be Decoy Tag`, both of which are defined in
 {{Section 17.3.1 of SD-CWT}}.
 
-The To Be Redacted Root Tag, defined in {{tbrrt}}, indicates to the Issuer that a claim or an array element is intended
-to be part of a Merkle Disclosure.
+The `To Be Redacted Root Tag` (tag 59), defined in {{tbrrt}}, indicates to the Issuer that a claim or an array element
+is intended to be part of a Merkle Disclosure. This tag wraps the element to be redacted in an Array of size 2. The
+first elements of this array is the logarithm of the expected size of the Merkle tree used for redaction. The size can
+be greater than the number of claims to redact but it must not be lower.
 
 {{fig-cwt-claimset-pre-issuance}} shows the example payload with the corresponding annotations.
 
@@ -176,6 +178,7 @@ to be part of a Merkle Disclosure.
     }
 }])
 ~~~
+
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
 
 For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
@@ -184,11 +187,14 @@ the tagged array or map are placed at its leaves.
 ## Merkle Tree {#merkle-tree}
 
 This specification uses binary Merkle trees similar to those defined in {{Section 2.1.1 of !RFC9162}}, with one
-difference: no domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). The arity of this Merkle Tree
-is 2. A higher branching factor provides neither additional benefit nor the desired properties.
+difference: no domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). The arity of
+this Merkle Tree is 2. A higher branching factor provides neither additional benefit nor the desired properties.
 
-The Merkle tree is left-balanced and complete. Unbalanced trees are not used, as they are vulnerable to forgery attacks. {{fig-merkle-tree-example}} shows an example.
-Also, a binary tree is easier to represent in memory and their indices are easier to compute as explained in {{Appendix
+The Merkle tree is a left-balanced perfect binary tree. Unbalanced trees are not used, as they are vulnerable to forgery
+attacks.
+{{fig-merkle-tree-example}} shows an example.
+Also, perfect binary trees are easier to represent in memory and their indices are easier to compute as explained in
+{{Appendix
 C of !RFC9420}}.
 
 ~~~ aasvg
@@ -196,7 +202,7 @@ C of !RFC9420}}.
                |
            .---+---.
           /         \
-   h(h(A)+h(B))    h(h(C)+h(d))
+   h(h(A)||h(B))    h(h(C)||h(d))
         / \         / \
        /   \       /   \
     h(A)   h(B)  h(C)  h(d)
@@ -208,11 +214,22 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
+
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
+
+In the previous example {{fig-cwt-claimset-pre-issuance}}, if we were to process the redaction of the
+"inspection_location" claim we would place the "country" claim at node index 0 and "region" at node index 2. The tree
+would have a height of 2 since we requested it, so the last node index would be 6 as in the example above.
 
 ### Decoys {#decoys}
 
-For each node in the Copath of the rightmost leaf, the leftmost blank leaf of the subtree rooted at that node MUST be
+Contrary to SD-CWT, Decoys have a different purpose here. They do not directly participate to hardening the Verifier's
+inference of private information. They are mandatory. They serve as a blinding factor to prevent a Verifier from
+guessing the number of leaves. A blank leaf hash is the hash of zero bytes.
+
+So we need to place the required amount of decoys in the SD-CWT, but filling all the nodes at right of the rightmost
+leaf would inflate the SD-CWT for no reason.
+So for each node in the Copath of the rightmost leaf, the leftmost blank leaf of the subtree rooted at that node MUST be
 replaced with a Decoy. When the entries fill all the leaves of the tree, no Decoy is added.
 
 ~~~ aasvg
@@ -237,6 +254,7 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
+
 {: #fig-placing-decoys title="Placing Decoys"}
 
 In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed as follows:
@@ -277,6 +295,7 @@ redacted_root_hash = [
   bstr, ; root hash
 ]
 ~~~
+
 {: #redacted-root-hash title="Redacted Root Hash"}
 
 If the redaction occurs in a map, the root hash is placed in the `map_redacted_root_hash` claim as a Redacted Root Hash
@@ -285,6 +304,7 @@ If the redaction occurs in a map, the root hash is placed in the `map_redacted_r
 ~~~ cddl
 / map_redacted_root_hash / simple(60) : [ uint, bstr ]
 ~~~
+
 {: #map-redacted-root-hash title="Map Redacted Root Hash"}
 
 If the redaction occurs in an array, the root hash is placed in an `array_redacted_root_hash` element at the end of the
@@ -296,6 +316,7 @@ array (in the case of partial redaction).
     60([ uint, bstr ]) / root hash of item 0 and 2 /
 ],
 ~~~
+
 {: #array-redacted-root-hash title="Array Redacted Root Hash"}
 
 ## Disclosure {#disclosure}
@@ -320,6 +341,7 @@ array (in the case of partial redaction).
     ]
 ]>>
 ~~~
+
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a Disclosure is an array of all redacted elements of a container (either a CBOR map or a CBOR array).
@@ -333,6 +355,7 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 ; an array of bstr-encoded Salted Disclosed Claims
 {::include ./cddl/salted-array.cddl}
 ~~~
+
 {: #cddl-salted-disclosed title="CDDL of Salted Disclosed Claims"}
 
 ## Content-Type
@@ -359,8 +382,8 @@ This section uses the following definition:
 
 Anchor:
 : For a presented leaf, it is the smallest common ancestor between the presented leaf and the rest of the presented
-  leaves, i.e., the lowest node whose subtree contains both that leaf and at least one other presented leaf. When a
-  single leaf is presented, it has no Anchor.
+leaves, i.e., the lowest node whose subtree contains both that leaf and at least one other presented leaf. When a
+single leaf is presented, it has no Anchor.
 
 For a given Disclosure, the Holder proceeds as follows:
 
@@ -397,6 +420,7 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
 
 Leaf: 0     1     2     3     4     5     6     7
 ~~~
+
 {: #fig-presentation-tree title="Merkle Tree of a Presentation"}
 
 In the following examples, `hash<<X>>` denotes the hash of the entry `X` when `X` is a leaf, and the `MTH` of the
@@ -411,6 +435,7 @@ hash is appended. `K` is a child of `R`: the walk stops. The Merkle proof for `A
   hash<<B>>,
 ]
 ~~~
+
 {: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
 
 The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not a child of `R`, the Anchor of `D`: its
@@ -422,6 +447,7 @@ hash is appended. `J` is a child of `R`: the walk stops. The Merkle proof for `D
   hash<<C>>,
 ]
 ~~~
+
 {: #fig-merkle-proof-leaf-d title="Merkle Proof of D"}
 
 The copath of `E` consists of nodes 10 (`d1`), 13 (`M`), and 3 (`R`). Neither `d1` nor `M` is a child of `V`, the
@@ -434,6 +460,7 @@ Anchor of `E`: their hashes are appended. `R` is a child of `V`: the walk stops.
   hash<<M>>,
 ]
 ~~~
+
 {: #fig-merkle-proof-leaf-e title="Merkle Proof of E"}
 
 The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains 4 hashes. The hashes of `J`, `K`, `R`,
@@ -446,6 +473,7 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains
   [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>> ]  / "E" /
 ]
 ~~~
+
 {: #fig-disclosure-proof title="Disclosure Proof"}
 
 If the Holder presents all the non-Decoy entries `A` to `E` of {{fig-presentation-tree}} instead, the Anchor of `A`
@@ -459,7 +487,7 @@ contains 2 hashes.
 An SMD-CWT Verifier MUST perform the same verification as an SD-CWT Verifier. This section only describes how to
 validate a Disclosure Proof against the `redacted_root_hash` of the corresponding container. In this section, n is the
 size encoded in the `redacted_root_hash`; the Merkle tree therefore has 2^n leaves, its node indexes range from 0 to
-2^(n+1) - 2, and its root has node index 2^n - 1.
+2^ (n+1) - 2, and its root has node index 2^n - 1.
 
 The Verifier proceeds as follows:
 
@@ -467,7 +495,7 @@ The Verifier proceeds as follows:
 2. For each Merkle proof:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
-       node index of a leaf, i.e., an even number less than or equal to 2^(n+1) - 2.
+       node index of a leaf, i.e., an even number less than or equal to 2^ (n+1) - 2.
     3. Verify that this Merkle Disclosure matches the type of the container: a `salted-merkle-claim` if the container
        is a map, or a `salted-merkle-element` if it is an array, as defined in {{cddl-salted-disclosed}}. In
        particular, a Merkle Disclosure of a Decoy, which only contains a salt, is rejected.
@@ -575,7 +603,8 @@ IANA is requested to register the following tag in the
 ### To Be Redacted Root Tag {#tbrrt}
 
 This tag identifies an array or map containing elements to be redacted. The value of this tag is an array of two
-elements: the first is the base-2 logarithm of the number of leaves of the Merkle tree, i.e., the maximum number of hashes in a
+elements: the first is the base-2 logarithm of the number of leaves of the Merkle tree, i.e., the maximum number of
+hashes in a
 Merkle proof, and the second is the wrapped array or map.
 
 * Tag: TBD2 (suggested 59)
@@ -652,9 +681,11 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
+
 {: #cddl-schema title="A complete CDDL description of SMD-CWT"}
 
 # Acknowledgments
+
 {:numbered="false"}
 
 TODO acknowledge.
