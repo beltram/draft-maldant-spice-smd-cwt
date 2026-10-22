@@ -374,32 +374,25 @@ structure as an SD-KBT. The only difference is that, rather than simply omitting
 reveal, the Holder transforms each Disclosure introduced by this document from a simple enumeration of values into a
 Disclosure Proof: an array containing one Merkle proof per presented leaf.
 
-The Merkle proofs of a Disclosure Proof are not independent of each other. The Merkle proof of a presented leaf stops
-at the first node of its copath whose subtree contains another presented leaf: the hash of that node is not included in
-the Merkle proof, and is instead recomputed by the Verifier from the Merkle proofs of the other presented leaves.
-
-This section uses the following definition:
-
-Anchor:
-: For a presented leaf, it is the smallest common ancestor between the presented leaf and the rest of the presented
-leaves, i.e., the lowest node whose subtree contains both that leaf and at least one other presented leaf. When a
-single leaf is presented, it has no Anchor.
+The Merkle proofs of a Disclosure Proof are not independent of each other. The hash of a copath node is not included
+in a Merkle proof when its subtree contains a presented leaf, since the Verifier recomputes it, or when it is already
+included in the Merkle proof of a previous leaf.
 
 For a given Disclosure, the Holder proceeds as follows:
 
 1. Iterate over the non-Decoy entries and select those to be presented. In the example of {{fig-presentation-tree}},
    leaves `A` to `E` are iterated over, and only `A`, `D`, and `E` are presented.
-2. Compute the Anchor of each selected leaf. In the example of {{fig-presentation-tree}}, the Anchor of `A` is `R`
-   (node 3), the Anchor of `D` is `R` (node 3), and the Anchor of `E` is `V` (node 7).
+2. Initialize a visited set with the node indexes of the selected leaves and of all their ancestors. In the example of
+   {{fig-presentation-tree}}, the visited set contains nodes 0, 6, and 8 (`A`, `D`, and `E`) and nodes 1, 3, 5, 7, 9,
+   and 11 (`J`, `R`, `K`, `V`, `L`, and `S`).
 3. For each selected leaf, from left to right, build its Merkle proof as an array:
     1. Build a Merkle Disclosure from the node index of the leaf and the SMD-CWT entry, and place it as the first
        element of the Merkle proof.
     2. Walk the copath of that leaf, from the leaf up to the root. For each node of the copath:
-        1. If this node is a child of the Anchor of the leaf, stop.
-        2. Otherwise, append the hash of that node to the Merkle proof. If that node is a leaf, its hash is the hash of
-           its entry, computed as described in {{merkle-root-hash}}. Otherwise, its hash is the `MTH` of the subtree
-           rooted at that node.
-    3. If the leaf has no Anchor, the walk ends after the last node of its copath, i.e., the child of the root.
+        1. If this node is in the visited set, skip it.
+        2. Otherwise, append the hash of that node to the Merkle proof and add the node to the visited set. If that
+           node is a leaf, its hash is the hash of its entry, computed as described in {{merkle-root-hash}}.
+           Otherwise, its hash is the `MTH` of the subtree rooted at that node.
 4. The Disclosure Proof is the array of the Merkle proofs, ordered by increasing node index of their leaf.
 
 ~~~ aasvg
@@ -426,8 +419,8 @@ Leaf: 0     1     2     3     4     5     6     7
 In the following examples, `hash<<X>>` denotes the hash of the entry `X` when `X` is a leaf, and the `MTH` of the
 subtree rooted at `X` otherwise.
 
-The copath of `A` consists of nodes 2 (`B`), 5 (`K`), and 11 (`S`). `B` is not a child of `R`, the Anchor of `A`: its
-hash is appended. `K` is a child of `R`: the walk stops. The Merkle proof for `A` is therefore:
+The copath of `A` consists of nodes 2 (`B`), 5 (`K`), and 11 (`S`). `B` is not visited: its hash is appended. `K` and
+`S` are visited: they are skipped. The Merkle proof for `A` is therefore:
 
 ~~~ cbor-diag
 [
@@ -438,8 +431,8 @@ hash is appended. `K` is a child of `R`: the walk stops. The Merkle proof for `A
 
 {: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
 
-The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not a child of `R`, the Anchor of `D`: its
-hash is appended. `J` is a child of `R`: the walk stops. The Merkle proof for `D` is therefore:
+The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not visited: its hash is appended. `J` and
+`S` are visited: they are skipped. The Merkle proof for `D` is therefore:
 
 ~~~ cbor-diag
 [
@@ -450,8 +443,8 @@ hash is appended. `J` is a child of `R`: the walk stops. The Merkle proof for `D
 
 {: #fig-merkle-proof-leaf-d title="Merkle Proof of D"}
 
-The copath of `E` consists of nodes 10 (`d1`), 13 (`M`), and 3 (`R`). Neither `d1` nor `M` is a child of `V`, the
-Anchor of `E`: their hashes are appended. `R` is a child of `V`: the walk stops. The Merkle proof for `E` is therefore:
+The copath of `E` consists of nodes 10 (`d1`), 13 (`M`), and 3 (`R`). `d1` and `M` are not visited: their hashes are
+appended. `R` is visited: it is skipped. The Merkle proof for `E` is therefore:
 
 ~~~ cbor-diag
 [
@@ -476,11 +469,12 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains
 
 {: #fig-disclosure-proof title="Disclosure Proof"}
 
-If the Holder presents all the non-Decoy entries `A` to `E` of {{fig-presentation-tree}} instead, the Anchor of `A`
-and `B` is `J`, the Anchor of `C` and `D` is `K`, and the Anchor of `E` is still `V`. The Merkle proofs of `A`, `B`,
-`C`, and `D` each contain only their Merkle Disclosure, since the first node of their copath is a child of their
-Anchor. The Merkle proof of `E` is unchanged and contains `hash<<d1>>` and `hash<<M>>`. The resulting Disclosure Proof
-contains 2 hashes.
+If the Holder presents all the non-Decoy entries `A` to `E` of {{fig-presentation-tree}} instead, every copath node of
+`A`, `B`, `C`, and `D` is visited: their Merkle proofs each contain only their Merkle Disclosure. The Merkle proof of
+`E` is unchanged and contains `hash<<d1>>` and `hash<<M>>`. The resulting Disclosure Proof contains 2 hashes.
+
+If the Holder presents only `A` and `B`, the Merkle proof of `A` contains `hash<<K>>` and `hash<<S>>`, which are then
+visited, so the Merkle proof of `B` contains no hash.
 
 # Verification
 
@@ -501,41 +495,34 @@ The Verifier proceeds as follows:
        particular, a Merkle Disclosure of a Decoy, which only contains a salt, is rejected.
 3. Verify that the node indexes of the Merkle Disclosures are strictly increasing from the first Merkle proof to the
    last one.
-4. From these node indexes, compute the Anchor of each presented leaf, as defined in {{smd-kbt}}. If the Disclosure
-   Proof contains a single Merkle proof, its leaf has no Anchor.
+4. Initialize a visited set with the node indexes of the presented leaves and of all their ancestors.
 5. Maintain a table associating node indexes with hashes, initially empty.
 6. For each Merkle proof:
     1. Remove the node index from the Merkle Disclosure. The remaining array is an SMD-CWT entry: compute its hash as
-       described in {{merkle-root-hash}}. This is the current hash, and the leaf is the current node.
+       described in {{merkle-root-hash}} and record it for the leaf in the table.
     2. Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:
-        1. If this node is a child of the Anchor of the leaf, stop the walk.
-        2. Otherwise, take the next hash of the Merkle proof. If the Merkle proof has no hash left, the validation
-           fails.
-        3. Hash the concatenation of the current hash and the hash taken from the Merkle proof, the hash of the left
-           child coming first: if the node index of the current node is smaller than the node index of the copath
-           node, the current hash comes first; otherwise, it comes second. The result becomes the current hash, and
-           the parent of the current node becomes the current node.
+        1. If this node is in the visited set, skip it.
+        2. Otherwise, take the next hash of the Merkle proof, record it for that node in the table, and add the node to
+           the visited set. If the Merkle proof has no hash left, the validation fails.
     3. Verify that all the hashes of the Merkle proof have been consumed. If not, the validation fails.
-    4. Record the current hash for the current node in the table. The current node is the child of the Anchor on the
-       side of the leaf, or the root if the leaf has no Anchor.
 7. While the table contains two nodes that are siblings, remove both of them from the table, hash the concatenation
    of their hashes, the hash of the left sibling coming first, and record the result for their parent in the table.
 8. Verify that the table contains a single node, that this node is the root, and that its hash is equal to the root
    hash in the `redacted_root_hash`.
 9. If any of these verifications fails, the validation of the whole Disclosure Proof fails.
 
-Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the Verifier determines that the Anchor of `A` is `R`
-(node 3), the Anchor of `D` is `R` (node 3), and the Anchor of `E` is `V` (node 7), then:
+Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set initially contains nodes 0, 1, 3, 5, 6, 7,
+8, 9, and 11. The Verifier then:
 
-1. Processes the Merkle proof of `A`: it combines `hash<<A>>` with `hash<<B>>` to obtain `hash<<J>>`. The next copath
-   node, `K`, is a child of `R`, the Anchor of `A`: `hash<<J>>` is recorded for node 1.
-2. Processes the Merkle proof of `D`: it combines `hash<<C>>` with `hash<<D>>` to obtain `hash<<K>>`. The next copath
-   node, `J`, is a child of `R`, the Anchor of `D`: `hash<<K>>` is recorded for node 5.
-3. Processes the Merkle proof of `E`: it combines `hash<<E>>` with `hash<<d1>>` to obtain `hash<<L>>`, then with
-   `hash<<M>>` to obtain `hash<<S>>`. The next copath node, `R`, is a child of `V`, the Anchor of `E`: `hash<<S>>` is
-   recorded for node 11.
-4. Combines the siblings `J` (node 1) and `K` (node 5) into `hash<<R>>`, recorded for node 3, then the siblings `R`
-   (node 3) and `S` (node 11) into `hash<<V>>`, recorded for node 7.
+1. Processes the Merkle proof of `A`: it records `hash<<A>>` for node 0 and `hash<<B>>` for node 2. Nodes 5 and 11
+   are visited.
+2. Processes the Merkle proof of `D`: it records `hash<<D>>` for node 6 and `hash<<C>>` for node 4. Nodes 1 and 11 are
+   visited.
+3. Processes the Merkle proof of `E`: it records `hash<<E>>` for node 8, `hash<<d1>>` for node 10, and `hash<<M>>` for
+   node 13. Node 3 is visited.
+4. Combines the siblings `A` and `B` into `hash<<J>>` (node 1), `C` and `D` into `hash<<K>>` (node 5), `E` and `d1`
+   into `hash<<L>>` (node 9), then `J` and `K` into `hash<<R>>` (node 3), `L` and `M` into `hash<<S>>` (node 11), and
+   finally `R` and `S` into `hash<<V>>` (node 7).
 5. Verifies that the table only contains node 7, the root, and that `hash<<V>>` is equal to the root hash in the
    `redacted_root_hash`.
 
