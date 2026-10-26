@@ -1,7 +1,7 @@
 ; redacted_claims_root is used as a map label. The corresponding value is
 ; a Redacted Claim Root Hash.
 ; TODO: any Unassigned value in https://www.iana.org/assignments/cbor-simple-values#simple
-redacted_claims_root = #7.60  ; CBOR simple value 60
+redacted_claims_hash = #7.60  ; CBOR simple value 60
 
 redacted_root_hash = [
   uint  ; logarithm(2) of the number of leaves represented in this root hash
@@ -14,4 +14,4 @@ MERKLE_REDACTED_ELEMENT_TAGNUM = 89
 
 ; redacted_elements_root is used in CDDL payloads that contain
 ; array elements that are redacted.
-redacted_elements_root = #6.<MERKLE_REDACTED_ELEMENT_TAGNUM>( redacted_root_hash )
+redacted_element_hash = #6.<MERKLE_REDACTED_ELEMENT_TAGNUM>( redacted_root_hash )

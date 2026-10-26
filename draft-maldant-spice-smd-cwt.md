@@ -265,7 +265,7 @@ In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed 
 
 The Issuer then computes the root hash of the Merkle tree as follows:
 
-1. Each entry is encoded as a `bstr-encoded-salted-merkle`, as defined in {{cddl-salted-array}}.
+1. Each entry is encoded as a `bstr-encoded-salted-merkle-entry`, as defined in {{cddl-salted-array}}.
 2. The resulting bytes are hashed using the hash algorithm indicated by `sd_alg` in the protected header.
 3. The hash of a parent node is the hash of the concatenation of the hashes of its two children, the hash of the left
    child coming first.
@@ -278,11 +278,10 @@ cannot be used as the hash of a leaf, and second preimage resistance between lea
 ### Inserting the Merkle Root Hash in the Payload
 
 The root hash is then inserted into the original payload in place of the redacted claims. These claims are declared
-within a container, which is either a map or an array. Since the container itself is annotated with the To Be Redacted
-Root Tag, it cannot contain regular `redacted_claim_keys` (TODO: reference) or redacted array elements (tag 60) (TODO:
-reference).
+within a container, which is either a map or an array. Since the container itself is annotated with the `To Be Redacted
+Root Tag`, it cannot contain regular `redacted_claim_keys` (simple value 59) or redacted array elements (tag 60).
 
-Regardless of the type of the parent container, the root hash is represented as a Redacted Root Hash: an array of two
+Regardless of the type of the parent container, the root hash is represented as a `redacted_root_hash`: an array of two
 elements, the first of which is the logarithmic size of the Merkle tree producing the root hash, and the second of
 which is the root hash itself.
 
@@ -295,26 +294,25 @@ redacted_root_hash = [
 
 {: #redacted-root-hash title="Redacted Root Hash"}
 
-If the redaction occurs in a map, the root hash is placed in the `map_redacted_root_hash` claim as a Redacted Root Hash
-({{redacted-root-hash}}).
+If the redaction occurs in a map, the `redacted_root_hash` is placed in the `redacted_claim_hash` claim.
 
 ~~~ cddl
-/ map_redacted_root_hash / simple(60) : [ uint, bstr ]
+/ redacted_claim_hash / simple(60) : [ uint, bstr ] / redacted_root_hash /
 ~~~
 
-{: #map-redacted-root-hash title="Map Redacted Root Hash"}
+{: #redacted-claim-hash title="Redacted Claim Hash"}
 
-If the redaction occurs in an array, the root hash is placed in an `array_redacted_root_hash` element appended to the
+If the redaction occurs in an array, the root hash is placed in an `redacted_element_hash` element appended to the
 array, after the elements that are not redacted.
 
 ~~~ cddl
 "inspection_dates" : [
     1612498440, / item 1 not redacted /
-    60([ uint, bstr ]) / root hash of item 0 and 2 /
+    89([ uint, bstr ]) / root hash of item 0 and 2 /
 ],
 ~~~
 
-{: #array-redacted-root-hash title="Array Redacted Root Hash"}
+{: #redacted-element-hash title="Redacted Element Hash"}
 
 ## Disclosure {#disclosure}
 
@@ -341,7 +339,7 @@ array, after the elements that are not redacted.
 
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
-In an SMD-CWT, a Disclosure is an array of all redacted elements of a container (either a CBOR map or a CBOR array).
+In an SMD-CWT, a Disclosure is an array of all redacted elements of a given container (either a CBOR map or array).
 Each of these elements has the structure described in {{Section 3.2 of SD-CWT}}, except that it is not individually
 wrapped in a CBOR bstr.
 

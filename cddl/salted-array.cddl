@@ -1,6 +1,6 @@
 ; in SMD-CWT
-salted-merkle-array = [ +bstr-encoded-salted-merkle ]
-bstr-encoded-salted-merkle = bstr .cbor salted-merkle-entries
+salted-merkle-array = [ +bstr-encoded-salted-merkle-entry ]
+bstr-encoded-salted-merkle-entry = bstr .cbor salted-merkle-entries
 
 ; in SMD-KBT
 salted-array-proofs = [ +bstr-encoded-salted-proof ]
