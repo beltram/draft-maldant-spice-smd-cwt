@@ -4,15 +4,34 @@ bstr-encoded-salted-merkle-entry = bstr .cbor salted-merkle-entries
 
 ; in SMD-KBT
 salted-array-proofs = [ +bstr-encoded-salted-proof ]
-bstr-encoded-salted-proof = bstr .cbor salted-merkle-proof
+bstr-encoded-salted-proof = bstr .cbor disclosure-proof
 
 ; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
-salted-merkle-entry = salted-claim / salted-element / decoy / salted-merkle-entry
-salted-merkle-proof = salted-claim / salted-element / decoy / salted-merkle-proof
+salted-merkle-entry = salted-claim / salted-element / decoy
 
 salted-merkle-entries = [ +salted-merkle-entry ]
 
-salted-merkle-proof = [ +merkle-entry ] ; TODO
+; one Merkle proof per presented leaf, ordered by increasing node index
+disclosure-proof = [ +merkle-proof ]
+
+merkle-proof = [
+  indexed-entry,
+  * bstr             ; hash of a copath node, from the leaf up to the root
+]
+
+; a presented entry prefixed with the node index of its leaf; Decoys are never presented
+indexed-entry = salted-merkle-claim / salted-merkle-element
+salted-merkle-claim = [
+  uint,              ; node index of the leaf
+  bstr .size 16,     ; 128-bit salt
+  any,               ; Claim Value
+  (int / text)       ; Claim Key
+]
+salted-merkle-element = [
+  uint,              ; node index of the leaf
+  bstr .size 16,     ; 128-bit salt
+  any                ; Claim Value
+]
 
 ; repeated here
 salted-claim = [
