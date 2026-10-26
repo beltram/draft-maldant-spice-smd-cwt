@@ -393,7 +393,7 @@ For a given Disclosure, the Holder proceeds as follows:
    {{fig-presentation-tree}}, the visited set contains nodes 0, 6, and 8 (`A`, `D`, and `E`) and nodes 1, 3, 5, 7, 9,
    and 11 (`J`, `R`, `K`, `V`, `L`, and `S`).
 3. For each selected leaf, from left to right, build its Merkle proof as an array:
-    1. Build an Indexed Entry by prefixing the SMD-CWT entry with the node index of the leaf, and place it as the
+    1. Build a Redacted Entry by prefixing the SMD-CWT entry with the node index of the leaf, and place it as the
        first element of the Merkle proof.
     2. Walk the copath of that leaf, from the leaf up to the root. For each node of the copath:
         1. If this node is in the visited set, skip it.
@@ -477,7 +477,7 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains
 {: #fig-disclosure-proof title="Disclosure Proof"}
 
 If the Holder presents all the non-Decoy entries `A` to `E` of {{fig-presentation-tree}} instead, every copath node of
-`A`, `B`, `C`, and `D` is visited: their Merkle proofs each contain only their Indexed Entry. The Merkle proof of
+`A`, `B`, `C`, and `D` is visited: their Merkle proofs each contain only their Redacted Entry. The Merkle proof of
 `E` is unchanged and contains `hash<<d1>>` and `hash<<M>>`. The resulting Disclosure Proof contains 2 hashes.
 
 If the Holder presents only `A` and `B`, the Merkle proof of `A` contains `hash<<K>>` and `hash<<S>>`, which are then
@@ -499,17 +499,17 @@ The Verifier proceeds as follows:
 1. Verify that the Disclosure Proof contains at least one and at most `2^n` Merkle proofs.
 2. For each Merkle proof:
     1. Verify that it contains at most n + 1 elements.
-    2. Verify that its first element is an Indexed Entry, and that the node index of this Indexed Entry is the
+    2. Verify that its first element is a Redacted Entry, and that the node index of this Redacted Entry is the
        node index of a leaf, i.e., an even number less than or equal to 2^ (n+1) - 2.
-    3. Verify that this Indexed Entry matches the type of the container: a `salted-merkle-claim` if the container
+    3. Verify that this Redacted Entry matches the type of the container: a `salted-merkle-claim` if the container
        is a map, or a `salted-merkle-element` if it is an array, as defined in {{cddl-salted-array}}. In
-       particular, an Indexed Entry of a Decoy, which only contains a salt, is rejected.
-3. Verify that the node indexes of the Indexed Entries are strictly increasing from the first Merkle proof to the
+       particular, a Redacted Entry of a Decoy, which only contains a salt, is rejected.
+3. Verify that the node indexes of the Redacted Entries are strictly increasing from the first Merkle proof to the
    last one.
 4. Initialize a visited set with the node indexes of the presented leaves and of all their ancestors.
 5. Maintain a table associating node indexes with hashes, initially empty.
 6. For each Merkle proof:
-    1. Remove the node index from the Indexed Entry. The remaining array is an SMD-CWT entry: compute its hash as
+    1. Remove the node index from the Redacted Entry. The remaining array is an SMD-CWT entry: compute its hash as
        described in {{merkle-root-hash}} and record it for the leaf in the table.
     2. Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:
         1. If this node is in the visited set, skip it.

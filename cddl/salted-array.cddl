@@ -15,12 +15,12 @@ salted-merkle-entries = [ +salted-merkle-entry ]
 disclosure-proof = [ +merkle-proof ]
 
 merkle-proof = [
-  indexed-entry,
+  redacted-entry,
   * bstr             ; hash of a copath node, from the leaf up to the root
 ]
 
 ; a presented entry prefixed with the node index of its leaf; Decoys are never presented
-indexed-entry = salted-merkle-claim / salted-merkle-element
+redacted-entry = salted-merkle-claim / salted-merkle-element
 salted-merkle-claim = [
   uint,              ; node index of the leaf
   bstr .size 16,     ; 128-bit salt
