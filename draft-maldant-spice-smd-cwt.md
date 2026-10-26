@@ -108,7 +108,7 @@ Selective Merkle Disclosure Key Binding Token (SMD-KBT):
 : An SD-KBT used to demonstrate possession of a confirmation method and to present claims with a Merkle proof.
 
 Copath:
-: In a Merkle Tree for a given leaf, all the nodes alongside the inclusion proof of that leaf.
+: For a given leaf of a Merkle tree, the siblings of the nodes on the path from that leaf to the root.
 
 All other terms used in this document have the meaning defined in {{SD-CWT}}.
 
@@ -156,9 +156,9 @@ An SMD-CWT Issuer MUST support the `To Be Redacted Tag` and the `To Be Decoy Tag
 {{Section 17.3.1 of SD-CWT}}.
 
 The `To Be Redacted Root Tag` (tag 59), defined in {{tbrrt}}, indicates to the Issuer that a claim or an array element
-is intended to be part of a Merkle Disclosure. This tag wraps the element to be redacted in an Array of size 2. The
-first elements of this array is the logarithm of the expected size of the Merkle tree used for redaction. The size can
-be greater than the number of claims to redact but it must not be lower.
+is intended to be part of a Merkle Disclosure. This tag wraps the element to be redacted in an array of size 2. The
+first element of this array is the base-2 logarithm of the size of the Merkle tree used for redaction. This size MAY be
+greater than the number of claims to redact, but MUST NOT be lower.
 
 {{fig-cwt-claimset-pre-issuance}} shows the example payload with the corresponding annotations.
 
@@ -179,7 +179,7 @@ be greater than the number of claims to redact but it must not be lower.
 }])
 ~~~
 
-{: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Pre Issuance"}
+{: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Before Issuance"}
 
 For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
 the tagged array or map are placed at its leaves.
@@ -187,15 +187,12 @@ the tagged array or map are placed at its leaves.
 ## Merkle Tree {#merkle-tree}
 
 This specification uses binary Merkle trees similar to those defined in {{Section 2.1.1 of !RFC9162}}, with one
-difference: no domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). The arity of
-this Merkle Tree is 2. A higher branching factor provides neither additional benefit nor the desired properties.
+difference: no domain separation prefix is added to the leaves and the nodes (see {{merkle-root-hash}}). A higher
+branching factor would provide neither additional benefit nor the desired properties.
 
-The Merkle tree is a left-balanced perfect binary tree. Unbalanced trees are not used, as they are vulnerable to forgery
-attacks.
-{{fig-merkle-tree-example}} shows an example.
-Also, perfect binary trees are easier to represent in memory and their indices are easier to compute as explained in
-{{Appendix
-C of !RFC9420}}.
+The Merkle tree is a left-balanced perfect binary tree, as shown in {{fig-merkle-tree-example}}. Unbalanced trees are
+not used, as they are vulnerable to forgery attacks. Perfect binary trees are also easier to represent in memory, and
+their node indexes are easier to compute, as explained in {{Appendix C of !RFC9420}}.
 
 ~~~ aasvg
               root
@@ -217,20 +214,19 @@ Leaf: 0     1     2     3
 
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
-In the previous example {{fig-cwt-claimset-pre-issuance}}, if we were to process the redaction of the
-"inspection_location" claim we would place the "country" claim at node index 0 and "region" at node index 2. The tree
-would have a height of 2 since we requested it, so the last node index would be 6 as in the example above.
+In {{fig-cwt-claimset-pre-issuance}}, the redaction of the "inspection_location" claim places the "country" claim at
+node index 0 and the "region" claim at node index 2. Since a size of 2 is requested, the tree has a height of 2 and its
+last node index is 6, as in {{fig-merkle-tree-example}}.
 
 ### Decoys {#decoys}
 
-Contrary to SD-CWT, Decoys have a different purpose here. They do not directly participate to hardening the Verifier's
-inference of private information. They are mandatory. They serve as a blinding factor to prevent a Verifier from
-guessing the number of leaves since a blank leaf hash is the hash of zero bytes.
+Decoys serve a different purpose than in SD-CWT: they do not directly hinder the Verifier's inference of private
+information. Instead, they act as a blinding factor that prevents a Verifier from inferring the number of leaves, since
+the hash of a blank leaf is the hash of zero bytes. Decoys are therefore mandatory.
 
-So we need to place the required amount of decoys in the SD-CWT, but filling all the blank nodes would inflate the
-SD-CWT for no reason.
-So for each node in the Copath of the rightmost leaf, the leftmost blank leaf of the subtree rooted at that node MUST be
-replaced with a Decoy. When the entries fill all the leaves of the tree, no Decoy is added.
+Replacing every blank leaf with a Decoy would needlessly inflate the SMD-CWT. Instead, for each node in the Copath of the
+rightmost entry, the leftmost blank leaf of the subtree rooted at that node MUST be replaced with a Decoy. When the
+entries fill all the leaves of the tree, no Decoy is added.
 
 ~~~ aasvg
                                                    X
@@ -271,14 +267,15 @@ The Issuer then computes the root hash of the Merkle tree as follows:
 
 1. Each entry is encoded as a `bstr-encoded-salted-merkle`, as defined in {{cddl-salted-array}}.
 2. The resulting bytes are hashed using the hash algorithm indicated by `sd_alg` in the protected header.
-3. The hash of a parent node is the hash of its two children.
+3. The hash of a parent node is the hash of the concatenation of the hashes of its two children, the hash of the left
+   child coming first.
 
-We define this operation as `MTH` for Merkle Tree Hash, similarly to the one described in {{Section 2.1.1 of !RFC9162}}.
-Note that contrary to {{!RFC9162}}, we do not add a domain separation prefix to the leaves and the nodes for the simple
-reason that our tree is balanced and its size is authenticated by the issuer. So each Inclusion Proof length must be the
-same and so a second preimage resistance is not necessary as a node `MTH` cannot be used as a leaf one.
+This operation is denoted `MTH` (Merkle Tree Hash), similarly to the one described in {{Section 2.1.1 of !RFC9162}}.
+Unlike in {{!RFC9162}}, no domain separation prefix is added to the leaves and the nodes: since the tree is balanced and
+its size is authenticated by the Issuer, all leaves are at the same depth. The `MTH` of an interior node therefore
+cannot be used as the hash of a leaf, and second preimage resistance between leaves and nodes is not required.
 
-### Inserting the Merkle Root Hash in the payload
+### Inserting the Merkle Root Hash in the Payload
 
 The root hash is then inserted into the original payload in place of the redacted claims. These claims are declared
 within a container, which is either a map or an array. Since the container itself is annotated with the To Be Redacted
@@ -291,7 +288,7 @@ which is the root hash itself.
 
 ~~~ cddl
 redacted_root_hash = [
-  uint,  ; logarithm(2) of the number of leaves represented in this root hash
+  uint,  ; base-2 logarithm of the number of leaves represented in this root hash
   bstr, ; root hash
 ]
 ~~~
@@ -307,8 +304,8 @@ If the redaction occurs in a map, the root hash is placed in the `map_redacted_r
 
 {: #map-redacted-root-hash title="Map Redacted Root Hash"}
 
-If the redaction occurs in an array, the root hash is placed in an `array_redacted_root_hash` element at the end of the
-array (in the case of partial redaction).
+If the redaction occurs in an array, the root hash is placed in an `array_redacted_root_hash` element appended to the
+array, after the elements that are not redacted.
 
 ~~~ cddl
 "inspection_dates" : [
@@ -348,7 +345,7 @@ In an SMD-CWT, a Disclosure is an array of all redacted elements of a container 
 Each of these elements has the structure described in {{Section 3.2 of SD-CWT}}, except that it is not individually
 wrapped in a CBOR bstr.
 
-This Disclosure, along with all other Merkle Disclosures, is to be placed in the `sd_claims` unprotected header
+This Disclosure, along with all other Merkle Disclosures, MUST be placed in the `sd_claims` unprotected header
 parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 
 ~~~ cddl
@@ -481,7 +478,7 @@ visited, so the Merkle proof of `B` contains no hash.
 An SMD-CWT Verifier MUST perform the same verification as an SD-CWT Verifier. This section only describes how to
 validate a Disclosure Proof against the `redacted_root_hash` of the corresponding container. In this section, n is the
 size encoded in the `redacted_root_hash`; the Merkle tree therefore has 2^n leaves, its node indexes range from 0 to
-2^ (n+1) - 2, and its root has node index 2^n - 1.
+2^(n+1) - 2, and its root has node index 2^n - 1.
 
 The Verifier proceeds as follows:
 
@@ -489,7 +486,7 @@ The Verifier proceeds as follows:
 2. For each Merkle proof:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
-       node index of a leaf, i.e., an even number less than or equal to 2^ (n+1) - 2.
+       node index of a leaf, i.e., an even number less than or equal to 2^(n+1) - 2.
     3. Verify that this Merkle Disclosure matches the type of the container: a `salted-merkle-claim` if the container
        is a map, or a `salted-merkle-element` if it is an array, as defined in {{cddl-salted-array}}. In
        particular, a Merkle Disclosure of a Decoy, which only contains a salt, is rejected.
@@ -598,7 +595,7 @@ Merkle proof, and the second is the wrapped array or map.
 * Data Item: (array or map)
 * Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
   Redacted Tag defined in {{Section 17.3.1 of SD-CWT}}.
-* Specification Document (s): {{tbr-tag}} of this specification
+* Specification Document(s): {{tbr-tag}} of this specification
 
 ## Media Types
 
@@ -620,9 +617,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number (s): n/a
-    - File extension (s): n/a
-    - Macintosh file type code (s): n/a
+    - Magic number(s): n/a
+    - File extension(s): n/a
+    - Macintosh file type code(s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -647,9 +644,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number (s): n/a
-    - File extension (s): n/a
-    - Macintosh file type code (s): n/a
+    - Magic number(s): n/a
+    - File extension(s): n/a
+    - Macintosh file type code(s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
