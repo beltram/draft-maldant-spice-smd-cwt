@@ -513,12 +513,13 @@ The Verifier proceeds as follows:
        described in {{merkle-root-hash}} and record it for the leaf in the table.
     2. Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:
         1. If this node is in the visited set, skip it.
-        2. Otherwise, compute the hash of the Merkle proof, record it for that node in the table, and add the node to
+        2. Otherwise, take the next hash of the Merkle proof, record it for that node in the table, and add the node to
            the visited set. If the Merkle proof has no hash left, the validation fails.
-7. While the table contains two nodes that are siblings, remove both of them from the table, hash the concatenation
-   of their hashes, the hash of the left sibling coming first, and record the result for their parent in the table.
-8. Verify that the table contains a single node, that this node is the root, and that its hash is equal to the root
-   hash in the `redacted_root_hash`.
+    3. Verify that all the hashes of the Merkle proof have been consumed. If not, the validation fails.
+7. Compute the hash of the root, where the hash of a node is the hash recorded for that node in the table if there is
+   one, and otherwise the hash of the concatenation of the hashes of its left and right children, in that order. If
+   a leaf with no hash recorded in the table is reached, the validation fails.
+8. Verify that the hash of the root is equal to the root hash in the `redacted_root_hash`.
 9. If any of these verifications fails, the validation of the whole Disclosure Proof fails.
 
 Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set initially contains nodes 0, 1, 3, 5, 6, 7,
@@ -530,11 +531,11 @@ Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set ini
    visited.
 3. Processes the Merkle proof of `E`: it records `hash<<E>>` for node 8, `hash<<d1>>` for node 10, and `hash<<M>>` for
    node 13. Node 3 is visited.
-4. Combines the siblings `A` and `B` into `hash<<J>>` (node 1), `C` and `D` into `hash<<K>>` (node 5), `E` and `d1`
-   into `hash<<L>>` (node 9), then `J` and `K` into `hash<<R>>` (node 3), `L` and `M` into `hash<<S>>` (node 11), and
-   finally `R` and `S` into `hash<<V>>` (node 7).
-5. Verifies that the table only contains node 7, the root, and that `hash<<V>>` is equal to the root hash in the
-   `redacted_root_hash`.
+4. Computes the hash of the root. The visited set now contains nodes 0 to 11 and 13, and the table associates nodes with
+   hashes `[(0, A), (2, B), (4, C), (6, D), (8, E), (10, d1), (13, M)]`. `V` (node 7) is computed from `R` (node 3) and
+   `S` (node 11), `R` from `J` (node 1) and `K` (node 5), `S` from `L` (node 9) and `M`, and `J`, `K`, and `L` from the
+   hashes recorded for nodes 0 and 2, 4 and 6, and 8 and 10.
+5. Verifies that `hash<<V>>` is equal to the root hash in the `redacted_root_hash`.
 
 # Benefits over SD-CWT
 
