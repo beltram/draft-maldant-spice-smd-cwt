@@ -353,6 +353,23 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 
 {: #cddl-salted-array title="CDDL of Salted Disclosed Claims"}
 
+{{fig-issued-smd-cwt}} shows the SMD-CWT issued from {{fig-cwt-claimset-pre-issuance}}. Each of the three containers
+tagged with the To Be Redacted Root Tag is replaced with a Redacted Root Hash, and its Disclosure is placed in
+`sd_claims`:
+
+- the top-level map (size 8) contains `inspector_license_number` followed by 3 Decoys;
+- the `inspection_dates` array (size 8) contains the 3 inspection dates followed by 2 Decoys;
+- the `inspection_location` map (size 4) contains `country` and `region` followed by 1 Decoy, as shown in
+  {{fig-smd-cwt-disclosures}}.
+
+The SMD-CWT is signed with the Issuer key of {{SD-CWT}}, and the `cnf` claim contains the Holder key of {{SD-CWT}}.
+
+~~~ cbor-diag
+{::include ./examples/issuer_cwt.edn}
+~~~
+
+{: #fig-issued-smd-cwt title="Issued SMD-CWT with all disclosures"}
+
 ## Content-Type
 
 An SMD-CWT MUST declare its content type by including the `typ` protected header parameter {{!RFC9596}} with one of the
