@@ -1,6 +1,6 @@
 <!-- regenerate: on (set to off if you edit this file) -->
 
-# TODO - Your title
+# SPICE SMD-CWT
 
 This is the working area for the individual Internet-Draft, "TODO - Your title".
 
