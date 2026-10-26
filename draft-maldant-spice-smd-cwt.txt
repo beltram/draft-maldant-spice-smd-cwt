@@ -2,34 +2,41 @@
 
 
 
-WG Working Group                                              Y. N. Here
-Internet-Draft                                    Your Organization Here
-Intended status: Informational                         25 September 2026
-Expires: 29 March 2027
+Secure Patterns for Internet CrEdentials                      B. Maldant
+Internet-Draft                                               SimpleLogin
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
-                           TODO - Your title
-                  draft-todo-yourname-protocol-latest
+         Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT)
+                   draft-maldant-spice-smd-cwt-latest
 
 Abstract
 
-   TODO Abstract
+   This document specifies an extension to Selective Disclosure CBOR Web
+   Tokens (SD-CWT) that reduces their size and improves their privacy
+   properties.  In this extension, the individual hashes of the redacted
+   claims of a map or an array are replaced with the root hash of a
+   Merkle tree, and disclosed claims are presented with a Merkle proof.
 
 About This Document
 
    This note is to be removed before publishing as an RFC.
 
    The latest revision of this draft can be found at
-   https://example.com/LATEST.  Status information for this document may
-   be found at https://datatracker.ietf.org/doc/draft-todo-yourname-
-   protocol/.
+   https://beltram.github.io/draft-maldant-spice-smd-cwt/draft-maldant-
+   spice-smd-cwt.html.  Status information for this document may be
+   found at https://datatracker.ietf.org/doc/draft-maldant-spice-smd-
+   cwt/.
 
-   Discussion of this document takes place on the WG Working Group
-   mailing list (mailto:WG@example.com), which is archived at
-   https://example.com/WG.
+   Discussion of this document takes place on the Secure Patterns for
+   Internet CrEdentials Working Group mailing list
+   (mailto:spice@ietf.org), which is archived at
+   https://mailarchive.ietf.org/arch/browse/spice/.  Subscribe at
+   https://www.ietf.org/mailman/listinfo/spice/.
 
    Source for this draft and an issue tracker can be found at
-   https://github.com/USER/REPO.
+   https://github.com/beltram/draft-maldant-spice-smd-cwt.
 
 Status of This Memo
 
@@ -46,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 March 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -65,18 +72,63 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-   2.  Conventions and Definitions
-   3.  Security Considerations
-   4.  IANA Considerations
-   5.  Normative References
+   2.  Terminology
+   3.  Overview
+   4.  Issuance
+     4.1.  Pre-Issuance
+     4.2.  Merkle Tree
+       4.2.1.  Decoys
+     4.3.  Computing the Merkle Root Hash
+       4.3.1.  Inserting the Merkle Root Hash in the Payload
+     4.4.  Disclosure
+     4.5.  Content-Type
+   5.  Presentation
+   6.  Verification
+   7.  Benefits over SD-CWT
+     7.1.  Smaller Tokens
+     7.2.  Privacy
+     7.3.  Free Decoys
+     7.4.  Verification Time
+   8.  Privacy Considerations
+     8.1.  Leakage of Claim Order
+   9.  Security Considerations
+   10. IANA Considerations
+     10.1.  CBOR Tags
+       10.1.1.  To Be Redacted Root Tag
+     10.2.  Media Types
+       10.2.1.  application/smd-cwt+sd-cwt
+       10.2.2.  application/smd-kbt+sd-kbt
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
+   Appendix A.  Complete CDDL Schema
    Acknowledgments
    Author's Address
 
 1.  Introduction
 
-   TODO Introduction
+   This document defines Selective Merkle Disclosure CBOR Web Tokens
+   (SMD-CWT), an extension to SD-CWT [SD-CWT].
 
-2.  Conventions and Definitions
+   SD-CWT provides an efficient mechanism by which a Holder controls
+   which claims it presents to a Verifier, thereby improving the privacy
+   of the Holder.  However, when the presentation is sparse and only a
+   subset of the claims is disclosed, a Verifier learns the total number
+   of claims, reducing the privacy benefit of selective disclosure.
+   Furthermore, each redacted claim adds 34 bytes to the presented token
+   (SD-KBT), even though the claim itself is not disclosed to the
+   Verifier.
+
+   To address both issues, this document specifies that, rather than
+   hashing each claim individually and placing the resulting hashes in a
+   CBOR array, the claims of each map or array are placed in a Merkle
+   tree and only the root hash of that tree is included in the SD-CWT.
+   A presentation of the token then includes only a Merkle proof
+   attesting to the integrity of the disclosed claims.  The size of this
+   proof is logarithmic in the number of claims, whereas the size of an
+   enumeration of all redacted claims is linear in that number.
+
+2.  Terminology
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
    "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -84,24 +136,1023 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-3.  Security Considerations
+   The CBOR examples in this document are shown in CBOR Extended
+   Diagnostic Notation (EDN) [I-D.ietf-cbor-edn-literals].
+
+   Data model constraints are described using the Concise Data
+   Definition Language (CDDL) [RFC8610].
+
+   This document uses terms from CWT [RFC8392], COSE [RFC9052]
+   [RFC9053], and JWT [RFC7519].
+
+   The terms Claim Name, Claim Key, and Claim Value are defined in
+   [RFC8392].
+
+   This document defines the following terms:
+
+   Selective Merkle Disclosure CBOR Web Token (SMD-CWT):  An SD-CWT
+      containing claims that can be selectively disclosed using a Merkle
+      proof.
+
+   Selective Merkle Disclosure Key Binding Token (SMD-KBT):  An SD-KBT
+      used to demonstrate possession of a confirmation method and to
+      present claims with a Merkle proof.
+
+   Copath:  For a given leaf of a Merkle tree, the siblings of the nodes
+      on the path from that leaf to the root.
+
+   All other terms used in this document have the meaning defined in
+   [SD-CWT].
+
+3.  Overview
+
+   SMD-CWT is an extension of SD-CWT: every SD-CWT is a valid SMD-CWT,
+   but an SMD-CWT is not necessarily a valid SD-CWT.  The two differ
+   only in the way redacted claims are authenticated and presented.
+
+   An SD-CWT Issuer enumerates the hashes of all redacted claims, either
+   in the redacted_claim_keys array of a map, or in place of the
+   redacted elements of an array.  In contrast, an SMD-CWT Issuer places
+   these hashes at the leaves of a left-balanced Merkle tree and
+   replaces the set of claims in the original payload with the root hash
+   of that tree.
+
+   A Holder then selectively presents claims to a Verifier in an SMD-KBT
+   by replacing the disclosed claims with proofs of their inclusion in
+   the Merkle tree.  The root hash of that tree is authenticated by the
+   Issuer in the SMD-CWT.
+
+4.  Issuance
+
+   An SMD-CWT Issuer is also an SD-CWT Issuer: it MUST be capable of
+   encoding and signing a regular SD-CWT when requested and, in
+   addition, supports the generation of SMD-CWTs.
+
+   Figure 1 shows an example CWT payload.  Common claims are omitted for
+   brevity.
+
+   {
+       "most_recent_inspection_passed": true,
+       "inspector_license_number": "ABCD-123456",
+       "inspection_dates" : [
+           1549560720,   / 2019-02-07T17:32:00 /
+           1612498440,   / 2021-02-04T20:14:00 /
+           1674004740,   / 2023-01-17T17:19:00 /
+       ],
+       "inspection_location": {
+           "country": "us",            / United States /
+           "region": "ca",             / California /
+           "postal_code": "94188"
+       }
+   }
+
+                          Figure 1: CWT Claims Set
+
+4.1.  Pre-Issuance
+
+   An SMD-CWT Issuer MUST support the To Be Redacted Tag and the To Be
+   Decoy Tag, both of which are defined in Section 17.3.1 of [SD-CWT].
+
+   The To Be Redacted Root Tag (tag 59), defined in Section 10.1.1,
+   indicates to the Issuer that a claim or an array element is intended
+   to be selectively disclosed with a Disclosure Proof.  This tag wraps
+   the element to be redacted in an array of size 2.  The first element
+   of this array is the base-2 logarithm of the size of the Merkle tree
+   used for redaction.  This size MAY be greater than the number of
+   claims to redact, but MUST NOT be lower.
+
+   Figure 2 shows the example payload with the corresponding
+   annotations.
+
+   59([3, { /merkle-redacted of size 8/
+       "most_recent_inspection_passed": true, /not-redacted/
+       "inspector_license_number": 58("ABCD-123456"), /redacted/
+       59([3, "inspection_dates"]) : [ /merkle-redacted of size 8/
+           58(1549560720), /redacted/
+           58(1612498440), /redacted/
+           58(1674004740), /redacted/
+       ],
+       59([2, "inspection_location"]): { /merkle-redacted of size 4/
+           "country": 58("us"),   /redacted/
+           "region": 58("ca"),    /redacted/
+           "postal_code": "94188" /not-redacted/
+       }
+   }])
+
+                  Figure 2: CWT Claims Set Before Issuance
+
+   For each occurrence of the To Be Redacted Root Tag, at any nesting
+   level, a Merkle tree is built, and all elements of the tagged array
+   or map are placed at its leaves.
+
+4.2.  Merkle Tree
+
+   This specification uses binary Merkle trees similar to those defined
+   in Section 2.1.1 of [RFC9162], with one difference: no domain
+   separation prefix is added to the leaves and the nodes (see
+   Section 4.3).  A higher branching factor would provide neither
+   additional benefit nor the desired properties.
+
+   The Merkle tree is a left-balanced perfect binary tree, as shown in
+   Figure 3.  Unbalanced trees are not used, as they are vulnerable to
+   forgery attacks.  Perfect binary trees are also easier to represent
+   in memory, and their node indexes are easier to compute, as explained
+   in Appendix C of [RFC9420].
+
+                 root
+                  |
+              .---+---.
+             /         \
+      h(h(A)||h(B))    h(h(C)||h(d))
+           / \         / \
+          /   \       /   \
+       h(A)   h(B)  h(C)  h(d)
+         |     |     |     |
+         |     |     |     |
+         A     B     C    d
+
+   Node: 0  1  2  3  4  5  6
+
+   Leaf: 0     1     2     3
+
+                      Figure 3: A 3-Claim Merkle Tree
+
+   In Figure 2, the redaction of the "inspection_location" claim places
+   the "country" claim at node index 0 and the "region" claim at node
+   index 2.  Since a size of 2 is requested, the tree has a height of 2
+   and its last node index is 6, as in Figure 3.
+
+4.2.1.  Decoys
+
+   Decoys serve a different purpose than in SD-CWT: they do not directly
+   hinder the Verifier's inference of private information.  Instead,
+   they act as a blinding factor that prevents a Verifier from inferring
+   the number of leaves, since the hash of a blank leaf is the hash of
+   zero bytes.  Decoys are therefore mandatory.
+
+   Replacing every blank leaf with a Decoy would needlessly inflate the
+   SMD-CWT.  Instead, for each node in the Copath of the rightmost
+   entry, the leftmost blank leaf of the subtree rooted at that node
+   MUST be replaced with a Decoy.  When the entries fill all the leaves
+   of the tree, no Decoy is added.
+
+                                                   X
+                                                   |
+                           .-----------------------+-----------------------.
+                           |                                               |
+                           V                                               W
+                           |                                               |
+                 .---------+---------.                           .---------+---------.
+                /                     \                         /                     \
+               R                       S                       T                       U
+               |                       |                       |                       |
+           .---+---.               .---+---.               .---+---.               .---+---.
+          /         \             /         \             /         \             /         \
+         J           K           L           M           N           O           P           Q
+        / \         / \         / \         / \         / \         / \         / \         / \
+       /   \       /   \       /   \       /   \       /   \       /   \       /   \       /   \
+      A     B     C     D     E     F     G     H     I     d     d     _     d     _     _     _
+
+Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+
+Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
+
+                       Figure 4: Placing Decoys
+
+   In Figure 4, the tree contains 9 entries.  Decoys (d) are placed as
+   follows:
+
+   1.  The rightmost entry of the tree is I.
+
+   2.  Its copath consists of nodes 18, 21, 27, and 7 (_, O, U, and V).
+
+   3.  For each node in this copath, the leftmost blank leaf of its
+       subtree is replaced with a Decoy.  A blank copath node that is
+       itself a leaf, such as 18, is replaced directly.
+
+   4.  Consequently, nodes 18, 20, and 24 are replaced with Decoys.
+
+4.3.  Computing the Merkle Root Hash
+
+   The Issuer then computes the root hash of the Merkle tree as follows:
+
+   1.  Each entry is encoded as a bstr-encoded-salted-merkle-entry, as
+       defined in Figure 9.
+
+   2.  The resulting bytes are hashed using the hash algorithm indicated
+       by sd_alg in the protected header.
+
+   3.  The hash of a parent node is the hash of the concatenation of the
+       hashes of its two children, the hash of the left child coming
+       first.
+
+   This operation is denoted MTH (Merkle Tree Hash), similarly to the
+   one described in Section 2.1.1 of [RFC9162].  Unlike in [RFC9162], no
+   domain separation prefix is added to the leaves and the nodes: since
+   the tree is balanced and its size is authenticated by the Issuer, all
+   leaves are at the same depth.  The MTH of an interior node therefore
+   cannot be used as the hash of a leaf, and second preimage resistance
+   between leaves and nodes is not required.
+
+4.3.1.  Inserting the Merkle Root Hash in the Payload
+
+   The root hash is then inserted into the original payload in place of
+   the redacted claims.  These claims are declared within a container,
+   which is either a map or an array.  Since the container itself is
+   annotated with the To Be Redacted Root Tag, it cannot contain regular
+   redacted_claim_keys (simple value 59) or redacted array elements (tag
+   60).
+
+   Regardless of the type of the parent container, the root hash is
+   represented as a redacted_root_hash: an array of two elements, the
+   first of which is the logarithmic size of the Merkle tree producing
+   the root hash, and the second of which is the root hash itself.
+
+   redacted_root_hash = [
+     uint,  ; base-2 logarithm of the number of leaves represented in this root hash
+     bstr, ; root hash
+   ]
+
+                        Figure 5: Redacted Root Hash
+
+   If the redaction occurs in a map, the redacted_root_hash is placed in
+   the redacted_claim_hash claim.
+
+   / redacted_claim_hash / simple(60) : [ uint, bstr ] / redacted_root_hash /
+
+                       Figure 6: Redacted Claim Hash
+
+   If the redaction occurs in an array, the root hash is placed in an
+   redacted_element_hash element appended to the array, after the
+   elements that are not redacted.
+
+   "inspection_dates" : [
+       1612498440, / item 1 not redacted /
+       89([ uint, bstr ]) / root hash of item 0 and 2 /
+   ],
+
+                      Figure 7: Redacted Element Hash
+
+4.4.  Disclosure
+
+   Figure 8 shows the disclosure of the inspection_location claim from
+   Figure 1.
+
+   <<[
+       [
+           /salt/   h'e39612407e99a347d61442957b3dfdac',
+           /value/  "us",
+           /claim/  "country"
+       ],
+       [
+           /salt/   h'4569990258b25a5267c17a3e3a225ec3',
+           /value/  "ca",
+           /claim/  "region"
+       ],
+       [
+           /salt/   h'e27403129cd88bf8fee4193e65339a35',
+       ]
+   ]>>
+
+                       Figure 8: SMD-CWT Disclosures
+
+   In an SMD-CWT, a Disclosure is an array of all redacted elements of a
+   given container (either a CBOR map or array).  Each of these elements
+   has the structure described in Section 3.2 of [SD-CWT], except that
+   they are not individually wrapped in a CBOR bstr (but the outer
+   disclosure is).
+
+   This Disclosure, along with all other Disclosures, MUST be placed in
+   the sd_claims unprotected header parameter of the SMD-CWT, as defined
+   in [SD-CWT].
+
+   ; an array of bstr-encoded Salted Disclosed Claims
+   ; in SMD-CWT
+   salted-merkle-array = [ +bstr-encoded-salted-merkle-entry ]
+   bstr-encoded-salted-merkle-entry = bstr .cbor salted-merkle-entries
+
+   ; in SMD-KBT
+   salted-array-proofs = [ +bstr-encoded-salted-proof ]
+   bstr-encoded-salted-proof = bstr .cbor disclosure-proof
+
+   ; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
+   salted-merkle-entry = salted-claim / salted-element / decoy
+
+   salted-merkle-entries = [ +salted-merkle-entry ]
+
+   ; one Merkle proof per presented leaf, ordered by increasing node index
+   disclosure-proof = [ +merkle-proof ]
+
+   merkle-proof = [
+     redacted-entry,
+     * bstr             ; hash of a copath node, from the leaf up to the root
+   ]
+
+   ; a presented entry prefixed with the node index of its leaf; Decoys are never presented
+   redacted-entry = salted-merkle-claim / salted-merkle-element
+   salted-merkle-claim = [
+     uint,              ; node index of the leaf
+     bstr .size 16,     ; 128-bit salt
+     any,               ; Claim Value
+     (int / text)       ; Claim Key
+   ]
+   salted-merkle-element = [
+     uint,              ; node index of the leaf
+     bstr .size 16,     ; 128-bit salt
+     any                ; Claim Value
+   ]
+
+   ; repeated here
+   salted-claim = [
+     bstr .size 16,     ; 128-bit salt
+     any,               ; Claim Value
+     (int / text)       ; Claim Key
+   ]
+   salted-element = [
+     bstr .size 16,     ; 128-bit salt
+     any                ; Claim Value
+   ]
+   decoy = [
+     bstr .size 16      ; 128-bit salt
+   ]
+
+                 Figure 9: CDDL of Salted Disclosed Claims
+
+   Figure 10 shows the SMD-CWT issued from Figure 2.  Each of the three
+   containers tagged with the To Be Redacted Root Tag is replaced with a
+   Redacted Root Hash, and its Disclosure is placed in sd_claims:
+
+   / cose-sign1 / 18([  / issuer SMD-CWT /
+     / CWT protected / << {
+       / alg /    1  : -35, / ES384 /
+       / kid /    4  : 'https://issuer.example/cose-key3',
+       / typ /    16 : 294, / smd-cwt+sd-cwt (TBD1) /
+       / sd_alg / 170 : -16  / SHA256 /
+     } >>,
+     / CWT unprotected / {
+       / sd_claims / 17 : [ / these are all the disclosures /
+           / top-level claims /
+           <<[
+               [
+                   /salt/   h'34821e0250edb1b8aa1e7fcaba161dd5',
+                   /value/  "ABCD-123456",
+                   /claim/  "inspector_license_number"
+               ],
+               [
+                   /salt/   h'96e374cd67609df517d855e6ad3892f5'
+               ],
+               [
+                   /salt/   h'dab6a2fe5be976c64c0006d738fca0ef'
+               ],
+               [
+                   /salt/   h'ae02b9b92e7ca06c3326b357118fcc57'
+               ]
+           ]>>,
+           / inspection_dates /
+           <<[
+               [
+                   /salt/   h'ad696c9e08b91319073b35c4df54715e',
+                   /value/  1549560720   / inspected 7-Feb-2019 /
+               ],
+               [
+                   /salt/   h'7ed13a094d0effbf257f5522fdb87446',
+                   /value/  1612498440   / inspected 4-Feb-2021 /
+               ],
+               [
+                   /salt/   h'd006ff82a4d84bcade7a008ad0fadb6e',
+                   /value/  1674004740   / inspected 17-Jan-2023 /
+               ],
+               [
+                   /salt/   h'ff65d029bca807f1fcd7fc7a66223ae1'
+               ],
+               [
+                   /salt/   h'c7ecad77d36b5b171573d2e32d650a1e'
+               ]
+           ]>>,
+           / inspection_location /
+           <<[
+               [
+                   /salt/   h'e39612407e99a347d61442957b3dfdac',
+                   /value/  "us",
+                   /claim/  "country"
+               ],
+               [
+                   /salt/   h'4569990258b25a5267c17a3e3a225ec3',
+                   /value/  "ca",
+                   /claim/  "region"
+               ],
+               [
+                   /salt/   h'e27403129cd88bf8fee4193e65339a35'
+               ]
+           ]>>
+       ]
+     },
+     / CWT payload / << {
+       / iss / 1   : "https://issuer.example",
+       / sub / 2   : "https://holder.example",
+       / exp / 4   : 1725330600,  /2024-09-03T02:30:00+00:00Z/
+       / nbf / 5   : 1725243900,  /2024-09-02T02:25:00+00:00Z/
+       / iat / 6   : 1725244200,  /2024-09-02T02:30:00+00:00Z/
+       / cnf / 8   : {
+         / cose key / 1 : {
+           / kty /  1: 2,  / EC2   /
+           / crv / -1: 1,  / P-256 /
+           / x /   -2: h'8554eb275dcd6fbd1c7ac641aa2c90d9
+                         2022fd0d3024b5af18c7cc61ad527a2d',
+           / y /   -3: h'4dc7ae2c677e96d0cc82597655ce92d5
+                         503f54293d87875d1e79ce4770194343'
+         }
+       },
+       "most_recent_inspection_passed": true,
+       "inspection_dates": [
+           / redacted_element_hash of all inspection dates /
+           89([3, h'a9e2b659695a7af97fcf25f8e833ffa2
+                    0a4316fe29644715bdbd3804ac2bed99'])
+       ],
+       "inspection_location": {
+           "postal_code": "94188",
+           / redacted_claim_hash of country and region /
+           simple(60) : [2, h'02d992604bf0618156a8f5eef336f676
+                           1db9af99edbc662e7c32850557a0ebd9']
+       },
+       / redacted_claim_hash of inspector_license_number /
+       simple(60) : [3, h'3641ce21bec3c8c109da92b0be662719
+                       b67cd8a99e99cd3b379c1ff466c0ec28']
+     } >>,
+     / CWT signature / h'dc15ca869bad13b9a827191d7d71a444
+                         7ff213168f401982009a1c3629bce4a5
+                         921642d9f15707541fdc7d9bad5d37b6
+                         5d4d779b72273b9d1776a6675920a1a2
+                         68272dc848858b9ccdfc45521bbb3247
+                         316db1b829b63d63198af2b608826768'
+   ])
+
+               Figure 10: Issued SMD-CWT with all disclosures
+
+4.5.  Content-Type
+
+   An SMD-CWT MUST declare its content type by including the typ
+   protected header parameter [RFC9596] with one of the following
+   values:
+
+   *  the unsigned integer Constrained Application Protocol (CoAP)
+      [RFC7252] content-format value TBD1 (294 suggested); or
+
+   *  the string content type value application/smd-cwt+sd-cwt.
+
+5.  Presentation
+
+   A Holder can selectively present some of the previously redacted
+   claims in an SMD-KBT.  An SMD-KBT has the same structure as an SD-
+   KBT.  The only difference is that, rather than simply omitting the
+   Disclosures it does not wish to reveal, the Holder transforms each
+   Disclosure introduced by this document from a simple enumeration of
+   values into a Disclosure Proof: an array containing one Merkle proof
+   per presented leaf.
+
+   The Merkle proofs of a Disclosure Proof are not independent of each
+   other.  The hash of a copath node is not included in a Merkle proof
+   when its subtree contains a presented leaf, since the Verifier
+   recomputes it, or when it is already included in the Merkle proof of
+   a previous leaf.
+
+   For a given Disclosure, the Holder proceeds as follows:
+
+   1.  Iterate over the non-Decoy entries and select those to be
+       presented.  In the example of Figure 11, leaves A to E are
+       iterated over, and only A, D, and E are presented.
+
+   2.  Initialize a visited set with the node indexes of the selected
+       leaves and of all their ancestors.  In the example of Figure 11,
+       the visited set contains nodes 0, 6, and 8 (A, D, and E) and
+       nodes 1, 3, 5, 7, 9, and 11 (J, R, K, V, L, and S).
+
+   3.  For each selected leaf, from left to right, build its Merkle
+       proof as an array:
+
+       1.  Build a Redacted Entry by prefixing the SMD-CWT entry with
+           the node index of the leaf, and place it as the first element
+           of the Merkle proof.
+
+       2.  Walk the copath of that leaf, from the leaf up to the root.
+           For each node of the copath:
+
+           1.  If this node is in the visited set, skip it.
+
+           2.  Otherwise, append the hash of that node to the Merkle
+               proof and add the node to the visited set.  If that node
+               is a leaf, its hash is the hash of its entry, computed as
+               described in Section 4.3.  Otherwise, its hash is the MTH
+               of the subtree rooted at that node.
+
+   4.  The Disclosure Proof is the array of the Merkle proofs, ordered
+       by increasing node index of their leaf.
+
+                              V
+                              |
+                    .---------+---------.
+                   /                     \
+                  R                       S
+                  |                       |
+              .---+---.               .---+---.
+             /         \             /         \
+            J           K           L           M
+           / \         / \         / \         / \
+          /   \       /   \       /   \       /   \
+         A    (B)   (C)    D     E    d1     d2    _
+
+   Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
+
+   Leaf: 0     1     2     3     4     5     6     7
+
+                  Figure 11: Merkle Tree of a Presentation
+
+   In the following examples, hash<<X>> denotes the hash of the entry X
+   when X is a leaf, and the MTH of the subtree rooted at X otherwise.
+
+   The copath of A consists of nodes 2 (B), 5 (K), and 11 (S).  B is not
+   visited: its hash is appended.  K and S are visited: they are
+   skipped.  The Merkle proof for A is therefore:
+
+   [
+     [0, h'4e2f040d5bb57daf86698066be470c24', "A"],
+     hash<<B>>,
+   ]
+
+                        Figure 12: Merkle Proof of A
+
+   The copath of D consists of nodes 4 (C), 1 (J), and 11 (S).  C is not
+   visited: its hash is appended.  J and S are visited: they are
+   skipped.  The Merkle proof for D is therefore:
+
+   [
+     [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"],
+     hash<<C>>,
+   ]
+
+                        Figure 13: Merkle Proof of D
+
+   The copath of E consists of nodes 10 (d1), 13 (M), and 3 (R). d1 and
+   M are not visited: their hashes are appended.  R is visited: it is
+   skipped.  The Merkle proof for E is therefore:
+
+   [
+     [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"],
+     hash<<d1>>,
+     hash<<M>>,
+   ]
+
+                        Figure 14: Merkle Proof of E
+
+   The resulting Disclosure Proof is shown in Figure 15.  It contains 4
+   hashes.  The hashes of J, K, R, L, S, and V are recomputed by the
+   Verifier.
+
+   [
+     [ [0, h'4e2f040d5bb57daf86698066be470c24', "A"], hash<<B>> ],             / "A" /
+     [ [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"], hash<<C>> ],             / "D" /
+     [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>> ]  / "E" /
+   ]
+
+                        Figure 15: Disclosure Proof
+
+   If the Holder presents all the non-Decoy entries A to E of Figure 11
+   instead, every copath node of A, B, C, and D is visited: their Merkle
+   proofs each contain only their Redacted Entry.  The Merkle proof of E
+   is unchanged and contains hash<<d1>> and hash<<M>>.  The resulting
+   Disclosure Proof contains 2 hashes.
+
+   If the Holder presents only A and B, the Merkle proof of A contains
+   hash<<K>> and hash<<S>>, which are then visited, so the Merkle proof
+   of B contains no hash.
+
+6.  Verification
+
+   An SMD-CWT Verifier MUST perform the same verification as an SD-CWT
+   Verifier.  This section only describes how to validate a Disclosure
+   Proof against the redacted_root_hash of the corresponding container.
+
+   To validate an SMD-KBT, repeat this verification for all the
+   disclosures presented.  Then also perform the validation described in
+   Section 9 of [SD-CWT] since they all should pass as well.
+
+   In this section, n is the size encoded in the redacted_root_hash (the
+   first element of the array); the Merkle tree therefore has 2^n
+   leaves, its node indexes range from 0 to 2^ (n+1) - 2, and its root
+   has node index 2^n - 1.
+
+   The Verifier proceeds as follows:
+
+   1.  Verify that the Disclosure Proof contains at least one and at
+       most 2^n Merkle proofs.
+
+   2.  For each Merkle proof:
+
+       1.  Verify that it contains at most n + 1 elements.
+
+       2.  Verify that its first element is a Redacted Entry, and that
+           the node index of this Redacted Entry is the node index of a
+           leaf, i.e., an even number less than or equal to 2^ (n+1) -
+           2.
+
+       3.  Verify that this Redacted Entry matches the type of the
+           container: a salted-merkle-claim if the container is a map,
+           or a salted-merkle-element if it is an array, as defined in
+           Figure 9.  In particular, a Redacted Entry of a Decoy, which
+           only contains a salt, is rejected.
+
+   3.  Verify that the node indexes of the Redacted Entries are sorted
+       in increasing order.
+
+   4.  Initialize a visited set with the node indexes of the presented
+       leaves and of all their ancestors.  Also maintain a table
+       associating node indexes with hashes, initially empty.
+
+   5.  For each Merkle proof:
+
+       1.  Remove the node index from the Redacted Entry.  The remaining
+           array is an SMD-CWT entry: compute its hash as described in
+           Section 4.3 and record it for the leaf in the table.
+
+       2.  Walk the copath of the leaf, from the leaf up to the root.
+           For each node of the copath:
+
+           1.  If this node is in the visited set, skip it.
+
+           2.  Otherwise, take the next hash of the Merkle proof, record
+               it for that node in the table, and add the node to the
+               visited set.  If the Merkle proof has no hash left, the
+               validation fails.
+
+       3.  Verify that all the hashes of the Merkle proof have been
+           consumed.  If not, the validation fails.
+
+   6.  Compute the hash of the root by walking down the tree from the
+       root.  For each node reached:
+
+       1.  If the table records a hash for this node, this is its hash,
+           and its subtree is not walked.
+
+       2.  Otherwise, if this node is a leaf, the validation fails.
+
+       3.  Otherwise, walk its left child and then its right child.  Its
+           hash is the hash of the concatenation of their hashes, the
+           hash of the left child coming first.
+
+   7.  Verify that the hash of the root is equal to the root hash in the
+       redacted_root_hash.
+
+   8.  If any of these verifications fails, the validation of the whole
+       Disclosure Proof fails.
+
+   Applied to the Disclosure Proof of Figure 15, the visited set
+   initially contains nodes 0, 1, 3, 5, 6, 7, 8, 9, and 11.  The
+   Verifier then:
+
+   1.  Processes the Merkle proof of A: it records hash<<A>> for node 0
+       and hash<<B>> for node 2.  Nodes 5 and 11 are visited.
+
+   2.  Processes the Merkle proof of D: it records hash<<D>> for node 6
+       and hash<<C>> for node 4.  Nodes 1 and 11 are visited.
+
+   3.  Processes the Merkle proof of E: it records hash<<E>> for node 8,
+       hash<<d1>> for node 10, and hash<<M>> for node 13.  Node 3 is
+       visited.
+
+   4.  Computes the hash of the root.  The visited set now contains
+       nodes 0 to 11 and 13, and the table associates nodes with hashes
+       [(0, A), (2, B), (4, C), (6, D), (8, E), (10, d1), (13, M)].  The
+       root V (node 7) is not in the table, so the Verifier walks down
+       to R (node 3) and S (node 11), which are not in the table either.
+       Under R, J (node 1) and K (node 5) are computed from nodes 0 and
+       2, and 4 and 6.  Under S, L (node 9) is computed from nodes 8 and
+       10, and M (node 13) is in the table.  R is then computed from J
+       and K, S from L and M, and V from R and S.
+
+   5.  Verifies that hash<<V>> is equal to the root hash in the
+       redacted_root_hash.
+
+7.  Benefits over SD-CWT
+
+7.1.  Smaller Tokens
+
+   In SD-CWT, the payload contains the hash of every redacted entry,
+   disclosed or not: a container with e redacted entries costs 34 * e
+   bytes in every presentation (assuming sd_alg is SHA-256).
+
+   The size of a presentation therefore grows linearly with e in SD-CWT,
+   but only logarithmically in SMD-CWT.  For instance, the Disclosure
+   Proof of Figure 15 contains 4 hashes in addition to the root hash,
+   i.e., 34 * 5 = 170 bytes, whereas an SD-CWT with the same 5 entries
+   and 2 Decoys contains 34 * 7 = 238 bytes of hashes.
+
+7.2.  Privacy
+
+   In SD-CWT, the payload contains one hash per redacted entry, so a
+   Verifier learns the number of redacted entries of each container Also
+   given presentation of SD-KBT are linkable, a Verifier can witness an
+   array of redacted elements grow or shrink which degrades privacy of
+   the Holder.  Decoys can be used to mitigate that, but they are
+   expensive in terms of space wasted.
+
+   In SMD-CWT, the Verifier only learns the logarithmic size of the
+   tree.  The Issuer can choose a larger n to hide this number further,
+   at the cost of at most one hash per additional level (see
+   Section 7.3).
+
+7.3.  Free Decoys
+
+   In SD-CWT, each Decoy adds one hash, i.e., 34 bytes, to the presented
+   token.
+
+   In SMD-CWT, the presented token contains only the root hash and the
+   Merkle proofs of the disclosed claims.  The size of these proofs
+   depends on the height of the tree, not on the number of its leaves.
+   Decoys can therefore be added at no cost up to the next power of two.
+   Beyond that, doubling the number of leaves adds one level to the
+   tree, which costs at most one additional hash, i.e., 34 bytes: the
+   subtree rooted at the new copath node contains no presented leaf, and
+   its hash is included at most once in the Disclosure Proof (see
+   Section 5).
+
+7.4.  Verification Time
+
+   TODO: The sparser the presentation, the faster the verification;
+   however, a full presentation takes twice as long to verify.
+
+8.  Privacy Considerations
+
+8.1.  Leakage of Claim Order
+
+9.  Security Considerations
 
    TODO Security
 
-4.  IANA Considerations
+10.  IANA Considerations
 
-   This document has no IANA actions.
+10.1.  CBOR Tags
 
-5.  Normative References
+   IANA is requested to register the following tag in the "CBOR Tags"
+   registry (https://www.iana.org/assignments/cbor-tags/cbor-
+   tags.xhtml#tags):
+
+10.1.1.  To Be Redacted Root Tag
+
+   This tag identifies an array or map containing elements to be
+   redacted.  The value of this tag is an array of two elements: the
+   first is the base-2 logarithm of the number of leaves of the Merkle
+   tree, i.e., the maximum number of hashes in a Merkle proof, and the
+   second is the wrapped array or map.
+
+   *  Tag: TBD2 (suggested 59)
+
+   *  Data Item: (array or map)
+
+   *  Semantics: An array or map containing elements to be redacted with
+      a Merkle proof, each tagged with the To Be Redacted Tag defined in
+      Section 17.3.1 of [SD-CWT].
+
+   *  Specification Document (s): Section 4.1 of this specification
+
+10.2.  Media Types
+
+   IANA is requested to register the following media types in the "Media
+   Types" registry (https://www.iana.org/assignments/media-types/media-
+   types.xhtml#application):
+
+10.2.1.  application/smd-cwt+sd-cwt
+
+   The following completed registration template is provided:
+
+   *  Type name: application
+
+   *  Subtype name: smd-cwt
+
+   *  Required parameters: n/a
+
+   *  Optional parameters: n/a
+
+   *  Encoding considerations: binary
+
+   *  Security considerations: Section 9 of this specification and
+      [RFC8392]
+
+   *  Interoperability considerations: n/a
+
+   *  Published specification: Section 4 of this specification
+
+   *  Applications that use this media type: TBD
+
+   *  Fragment identifier considerations: n/a
+
+   *  Additional information:
+
+      -  Magic number (s): n/a
+
+      -  File extension (s): n/a
+
+      -  Macintosh file type code (s): n/a
+
+   *  Person & email address to contact for further information: SPICE
+      WG mailing list (spice@ietf.org) or IETF Security Area
+      (saag@ietf.org)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: See Author's Addresses section
+
+   *  Change controller: IETF
+
+   *  Provisional registration?  No
+
+10.2.2.  application/smd-kbt+sd-kbt
+
+   The following completed registration template is provided:
+
+   *  Type name: application
+
+   *  Subtype name: smd-kbt
+
+   *  Required parameters: n/a
+
+   *  Optional parameters: n/a
+
+   *  Encoding considerations: binary
+
+   *  Security considerations: Section 9 of this specification and
+      [RFC8392]
+
+   *  Interoperability considerations: n/a
+
+   *  Published specification: Section 5 of this specification
+
+   *  Applications that use this media type: TBD
+
+   *  Fragment identifier considerations: n/a
+
+   *  Additional information:
+
+      -  Magic number (s): n/a
+
+      -  File extension (s): n/a
+
+      -  Macintosh file type code (s): n/a
+
+   *  Person & email address to contact for further information: SPICE
+      WG mailing list (spice@ietf.org) or IETF Security Area
+      (saag@ietf.org)
+
+   *  Intended usage: COMMON
+
+   *  Restrictions on usage: none
+
+   *  Author: See Author's Addresses section
+
+   *  Change controller: IETF
+
+   *  Provisional registration?  No
+
+11.  References
+
+11.1.  Normative References
+
+   [I-D.ietf-cbor-edn-literals]
+              Bormann, C., "Concise Diagnostic Notation (CDN)", Work in
+              Progress, Internet-Draft, draft-ietf-cbor-edn-literals-28,
+              29 September 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-cbor-edn-literals-28>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
 
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8392]  Jones, M., Wahlstroem, E., Erdtman, S., and H. Tschofenig,
+              "CBOR Web Token (CWT)", RFC 8392, DOI 10.17487/RFC8392,
+              May 2018, <https://www.rfc-editor.org/rfc/rfc8392>.
+
+   [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
+              Definition Language (CDDL): A Notational Convention to
+              Express Concise Binary Object Representation (CBOR) and
+              JSON Data Structures", RFC 8610, DOI 10.17487/RFC8610,
+              June 2019, <https://www.rfc-editor.org/rfc/rfc8610>.
+
+   [RFC9052]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Structures and Process", STD 96, RFC 9052,
+              DOI 10.17487/RFC9052, August 2022,
+              <https://www.rfc-editor.org/rfc/rfc9052>.
+
+   [RFC9053]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Initial Algorithms", RFC 9053, DOI 10.17487/RFC9053,
+              August 2022, <https://www.rfc-editor.org/rfc/rfc9053>.
+
+   [RFC9162]  Laurie, B., Messeri, E., and R. Stradling, "Certificate
+              Transparency Version 2.0", RFC 9162, DOI 10.17487/RFC9162,
+              December 2021, <https://www.rfc-editor.org/rfc/rfc9162>.
+
+   [RFC9420]  Barnes, R., Beurdouche, B., Robert, R., Millican, J.,
+              Omara, E., and K. Cohn-Gordon, "The Messaging Layer
+              Security (MLS) Protocol", RFC 9420, DOI 10.17487/RFC9420,
+              July 2023, <https://www.rfc-editor.org/rfc/rfc9420>.
+
+   [RFC9596]  Jones, M.B. and O. Steele, "CBOR Object Signing and
+              Encryption (COSE) "typ" (type) Header Parameter",
+              RFC 9596, DOI 10.17487/RFC9596, June 2024,
+              <https://www.rfc-editor.org/rfc/rfc9596>.
+
+   [SD-CWT]   Prorock, M., Steele, O., Birkholz, H., and R. Mahy,
+              "Selective Disclosure CBOR Web Tokens (SD-CWT)", Work in
+              Progress, Internet-Draft, draft-ietf-spice-sd-cwt-08, 1
+              June 2026, <https://datatracker.ietf.org/doc/html/draft-
+              ietf-spice-sd-cwt-08>.
+
+11.2.  Informative References
+
+   [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
+              Application Protocol (CoAP)", RFC 7252,
+              DOI 10.17487/RFC7252, June 2014,
+              <https://www.rfc-editor.org/rfc/rfc7252>.
+
+Appendix A.  Complete CDDL Schema
+
+   ; in SMD-CWT
+   salted-merkle-array = [ +bstr-encoded-salted-merkle-entry ]
+   bstr-encoded-salted-merkle-entry = bstr .cbor salted-merkle-entries
+
+   ; in SMD-KBT
+   salted-array-proofs = [ +bstr-encoded-salted-proof ]
+   bstr-encoded-salted-proof = bstr .cbor disclosure-proof
+
+   ; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
+   salted-merkle-entry = salted-claim / salted-element / decoy
+
+   salted-merkle-entries = [ +salted-merkle-entry ]
+
+   ; one Merkle proof per presented leaf, ordered by increasing node index
+   disclosure-proof = [ +merkle-proof ]
+
+   merkle-proof = [
+     redacted-entry,
+     * bstr             ; hash of a copath node, from the leaf up to the root
+   ]
+
+   ; a presented entry prefixed with the node index of its leaf; Decoys are never presented
+   redacted-entry = salted-merkle-claim / salted-merkle-element
+   salted-merkle-claim = [
+     uint,              ; node index of the leaf
+     bstr .size 16,     ; 128-bit salt
+     any,               ; Claim Value
+     (int / text)       ; Claim Key
+   ]
+   salted-merkle-element = [
+     uint,              ; node index of the leaf
+     bstr .size 16,     ; 128-bit salt
+     any                ; Claim Value
+   ]
+
+   ; repeated here
+   salted-claim = [
+     bstr .size 16,     ; 128-bit salt
+     any,               ; Claim Value
+     (int / text)       ; Claim Key
+   ]
+   salted-element = [
+     bstr .size 16,     ; 128-bit salt
+     any                ; Claim Value
+   ]
+   decoy = [
+     bstr .size 16      ; 128-bit salt
+   ]
+
+   ; redacted_claims_root is used as a map label. The corresponding value is
+   ; a Redacted Claim Root Hash.
+   ; TODO: any Unassigned value in https://www.iana.org/assignments/cbor-simple-values#simple
+   redacted_claims_hash = #7.60  ; CBOR simple value 60
+
+   redacted_root_hash = [
+     uint  ; logarithm(2) of the number of leaves represented in this root hash
+     bstr, ; root hash
+   ]
+
+   ; CBOR tag for wrapping the Merkle Root Hash of all the redacted elements in an array.
+   ; TODO: any Unassigned in https://www.iana.org/assignments/cbor-tags#tags
+   MERKLE_REDACTED_ELEMENT_TAGNUM = 89
+
+   ; redacted_elements_root is used in CDDL payloads that contain
+   ; array elements that are redacted.
+   redacted_element_hash = #6.<MERKLE_REDACTED_ELEMENT_TAGNUM>( redacted_root_hash )
+
+             Figure 16: A complete CDDL description of SMD-CWT
 
 Acknowledgments
 
@@ -109,6 +1160,6 @@ Acknowledgments
 
 Author's Address
 
-   Your Name Here
-   Your Organization Here
-   Email: your.email@example.com
+   Beltram Maldant
+   SimpleLogin
+   Email: beltram.ietf@pm.me
