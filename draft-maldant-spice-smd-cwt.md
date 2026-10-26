@@ -490,12 +490,12 @@ validate a Disclosure Proof against the `redacted_root_hash` of the correspondin
 To validate an SMD-KBT, repeat this verification for all the disclosures presented. Then also perform the validation
 described in {{Section 9 of SD-CWT}} since they all should pass as well.
 
-In this section, `n` is the size encoded in the `redacted_root_hash`; the Merkle tree therefore has `2^n` leaves, its
-node indexes range from 0 to `2^ (n+1) - 2`, and its root has node index `2^n - 1`.
+In this section, `n` is the size encoded in the `redacted_root_hash` (the first element of the array); the Merkle tree
+therefore has `2^n` leaves, its node indexes range from 0 to `2^ (n+1) - 2`, and its root has node index `2^n - 1`.
 
 The Verifier proceeds as follows:
 
-1. Verify that the Disclosure Proof contains at least one and at most 2^n Merkle proofs.
+1. Verify that the Disclosure Proof contains at least one and at most `2^n` Merkle proofs.
 2. For each Merkle proof:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
