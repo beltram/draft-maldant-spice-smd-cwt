@@ -224,7 +224,8 @@ Decoys serve a different purpose than in SD-CWT: they do not directly hinder the
 information. Instead, they act as a blinding factor that prevents a Verifier from inferring the number of leaves, since
 the hash of a blank leaf is the hash of zero bytes. Decoys are therefore mandatory.
 
-Replacing every blank leaf with a Decoy would needlessly inflate the SMD-CWT. Instead, for each node in the Copath of the
+Replacing every blank leaf with a Decoy would needlessly inflate the SMD-CWT. Instead, for each node in the Copath of
+the
 rightmost entry, the leftmost blank leaf of the subtree rooted at that node MUST be replaced with a Decoy. When the
 entries fill all the leaves of the tree, no Decoy is added.
 
@@ -357,13 +358,6 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 tagged with the To Be Redacted Root Tag is replaced with a Redacted Root Hash, and its Disclosure is placed in
 `sd_claims`:
 
-- the top-level map (size 8) contains `inspector_license_number` followed by 3 Decoys;
-- the `inspection_dates` array (size 8) contains the 3 inspection dates followed by 2 Decoys;
-- the `inspection_location` map (size 4) contains `country` and `region` followed by 1 Decoy, as shown in
-  {{fig-smd-cwt-disclosures}}.
-
-The SMD-CWT is signed with the Issuer key of {{SD-CWT}}, and the `cnf` claim contains the Holder key of {{SD-CWT}}.
-
 ~~~ cbor-diag
 {::include ./examples/issuer_cwt.edn}
 ~~~
@@ -491,9 +485,13 @@ visited, so the Merkle proof of `B` contains no hash.
 # Verification
 
 An SMD-CWT Verifier MUST perform the same verification as an SD-CWT Verifier. This section only describes how to
-validate a Disclosure Proof against the `redacted_root_hash` of the corresponding container. In this section, n is the
-size encoded in the `redacted_root_hash`; the Merkle tree therefore has 2^n leaves, its node indexes range from 0 to
-2^(n+1) - 2, and its root has node index 2^n - 1.
+validate a Disclosure Proof against the `redacted_root_hash` of the corresponding container.
+
+To validate an SMD-KBT, repeat this verification for all the disclosures presented. Then also perform the validation
+described in {{Section 9 of SD-CWT}} since they all should pass as well.
+
+In this section, `n` is the size encoded in the `redacted_root_hash`; the Merkle tree therefore has `2^n` leaves, its
+node indexes range from 0 to `2^ (n+1) - 2`, and its root has node index `2^n - 1`.
 
 The Verifier proceeds as follows:
 
@@ -501,7 +499,7 @@ The Verifier proceeds as follows:
 2. For each Merkle proof:
     1. Verify that it contains at most n + 1 elements.
     2. Verify that its first element is a Merkle Disclosure, and that the node index of this Merkle Disclosure is the
-       node index of a leaf, i.e., an even number less than or equal to 2^(n+1) - 2.
+       node index of a leaf, i.e., an even number less than or equal to 2^ (n+1) - 2.
     3. Verify that this Merkle Disclosure matches the type of the container: a `salted-merkle-claim` if the container
        is a map, or a `salted-merkle-element` if it is an array, as defined in {{cddl-salted-array}}. In
        particular, a Merkle Disclosure of a Decoy, which only contains a salt, is rejected.
@@ -610,7 +608,7 @@ Merkle proof, and the second is the wrapped array or map.
 * Data Item: (array or map)
 * Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
   Redacted Tag defined in {{Section 17.3.1 of SD-CWT}}.
-* Specification Document(s): {{tbr-tag}} of this specification
+* Specification Document (s): {{tbr-tag}} of this specification
 
 ## Media Types
 
@@ -632,9 +630,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
@@ -659,9 +657,9 @@ The following completed registration template is provided:
 * Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
-    - Magic number(s): n/a
-    - File extension(s): n/a
-    - Macintosh file type code(s): n/a
+    - Magic number (s): n/a
+    - File extension (s): n/a
+    - Macintosh file type code (s): n/a
 * Person & email address to contact for further information:
   SPICE WG mailing list (spice@ietf.org) or
   IETF Security Area (saag@ietf.org)
