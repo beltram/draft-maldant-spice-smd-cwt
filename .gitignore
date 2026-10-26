@@ -18,7 +18,7 @@
 /versioned/
 Gemfile.lock
 archive.json
-draft-maldant-spice-smd-cwt.xml
+#draft-maldant-spice-smd-cwt.xml
 draft-maldant-spice-smd-cwt.iml
 package-lock.json
 report.xml

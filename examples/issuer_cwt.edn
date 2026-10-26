@@ -1,0 +1,104 @@
+/ cose-sign1 / 18([  / issuer SMD-CWT /
+  / CWT protected / << {
+    / alg /    1  : -35, / ES384 /
+    / kid /    4  : 'https://issuer.example/cose-key3',
+    / typ /    16 : 294, / smd-cwt+sd-cwt (TBD1) /
+    / sd_alg / 170 : -16  / SHA256 /
+  } >>,
+  / CWT unprotected / {
+    / sd_claims / 17 : [ / these are all the disclosures /
+        / top-level claims /
+        <<[
+            [
+                /salt/   h'34821e0250edb1b8aa1e7fcaba161dd5',
+                /value/  "ABCD-123456",
+                /claim/  "inspector_license_number"
+            ],
+            [
+                /salt/   h'96e374cd67609df517d855e6ad3892f5'
+            ],
+            [
+                /salt/   h'dab6a2fe5be976c64c0006d738fca0ef'
+            ],
+            [
+                /salt/   h'ae02b9b92e7ca06c3326b357118fcc57'
+            ]
+        ]>>,
+        / inspection_dates /
+        <<[
+            [
+                /salt/   h'ad696c9e08b91319073b35c4df54715e',
+                /value/  1549560720   / inspected 7-Feb-2019 /
+            ],
+            [
+                /salt/   h'7ed13a094d0effbf257f5522fdb87446',
+                /value/  1612498440   / inspected 4-Feb-2021 /
+            ],
+            [
+                /salt/   h'd006ff82a4d84bcade7a008ad0fadb6e',
+                /value/  1674004740   / inspected 17-Jan-2023 /
+            ],
+            [
+                /salt/   h'ff65d029bca807f1fcd7fc7a66223ae1'
+            ],
+            [
+                /salt/   h'c7ecad77d36b5b171573d2e32d650a1e'
+            ]
+        ]>>,
+        / inspection_location /
+        <<[
+            [
+                /salt/   h'e39612407e99a347d61442957b3dfdac',
+                /value/  "us",
+                /claim/  "country"
+            ],
+            [
+                /salt/   h'4569990258b25a5267c17a3e3a225ec3',
+                /value/  "ca",
+                /claim/  "region"
+            ],
+            [
+                /salt/   h'e27403129cd88bf8fee4193e65339a35'
+            ]
+        ]>>
+    ]
+  },
+  / CWT payload / << {
+    / iss / 1   : "https://issuer.example",
+    / sub / 2   : "https://holder.example",
+    / exp / 4   : 1725330600,  /2024-09-03T02:30:00+00:00Z/
+    / nbf / 5   : 1725243900,  /2024-09-02T02:25:00+00:00Z/
+    / iat / 6   : 1725244200,  /2024-09-02T02:30:00+00:00Z/
+    / cnf / 8   : {
+      / cose key / 1 : {
+        / kty /  1: 2,  / EC2   /
+        / crv / -1: 1,  / P-256 /
+        / x /   -2: h'8554eb275dcd6fbd1c7ac641aa2c90d9
+                      2022fd0d3024b5af18c7cc61ad527a2d',
+        / y /   -3: h'4dc7ae2c677e96d0cc82597655ce92d5
+                      503f54293d87875d1e79ce4770194343'
+      }
+    },
+    "most_recent_inspection_passed": true,
+    "inspection_dates": [
+        / redacted_element_hash of all inspection dates /
+        89([3, h'a9e2b659695a7af97fcf25f8e833ffa2
+                 0a4316fe29644715bdbd3804ac2bed99'])
+    ],
+    "inspection_location": {
+        "postal_code": "94188",
+        / redacted_claim_hash of country and region /
+        simple(60) : [2, h'02d992604bf0618156a8f5eef336f676
+                        1db9af99edbc662e7c32850557a0ebd9']
+    },
+    / redacted_claim_hash of inspector_license_number /
+    simple(60) : [3, h'3641ce21bec3c8c109da92b0be662719
+                    b67cd8a99e99cd3b379c1ff466c0ec28']
+  } >>,
+  / CWT signature / h'dc15ca869bad13b9a827191d7d71a444
+                      7ff213168f401982009a1c3629bce4a5
+                      921642d9f15707541fdc7d9bad5d37b6
+                      5d4d779b72273b9d1776a6675920a1a2
+                      68272dc848858b9ccdfc45521bbb3247
+                      316db1b829b63d63198af2b608826768'
+])
