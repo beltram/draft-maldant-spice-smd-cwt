@@ -146,6 +146,7 @@ requested and, in addition, supports the generation of SMD-CWTs.
     }
 }
 ~~~
+
 {: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre-Issuance {#tbr-tag}
@@ -177,6 +178,7 @@ greater than the number of claims to redact, but MUST NOT be lower.
     }
 }])
 ~~~
+
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Before Issuance"}
 
 For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
@@ -209,6 +211,7 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
+
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
 In {{fig-cwt-claimset-pre-issuance}}, the redaction of the "inspection_location" claim places the "country" claim at
@@ -248,6 +251,7 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
+
 {: #fig-placing-decoys title="Placing Decoys"}
 
 In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed as follows:
@@ -288,6 +292,7 @@ redacted_root_hash = [
   bstr, ; root hash
 ]
 ~~~
+
 {: #redacted-root-hash title="Redacted Root Hash"}
 
 If the redaction occurs in a map, the `redacted_root_hash` is placed in the `redacted_claim_hash` claim.
@@ -295,6 +300,7 @@ If the redaction occurs in a map, the `redacted_root_hash` is placed in the `red
 ~~~ cddl
 / redacted_claim_hash / simple(60) : [ uint, bstr ] / redacted_root_hash /
 ~~~
+
 {: #redacted-claim-hash title="Redacted Claim Hash"}
 
 If the redaction occurs in an array, the root hash is placed in an `redacted_element_hash` element appended to the
@@ -306,6 +312,7 @@ array, after the elements that are not redacted.
     89([ uint, bstr ]) / root hash of item 0 and 2 /
 ],
 ~~~
+
 {: #redacted-element-hash title="Redacted Element Hash"}
 
 ## Disclosure {#disclosure}
@@ -330,6 +337,7 @@ array, after the elements that are not redacted.
     ]
 ]>>
 ~~~
+
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a Disclosure is an array of all redacted elements of a given container (either a CBOR map or array).
@@ -343,6 +351,7 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 ; an array of bstr-encoded Salted Disclosed Claims
 {::include ./cddl/salted-array.cddl}
 ~~~
+
 {: #cddl-salted-array title="CDDL of Salted Disclosed Claims"}
 
 {{fig-issued-smd-cwt}} shows the SMD-CWT issued from {{fig-cwt-claimset-pre-issuance}}. Each of the three containers
@@ -352,6 +361,7 @@ tagged with the To Be Redacted Root Tag is replaced with a Redacted Root Hash, a
 ~~~ cbor-diag
 {::include ./examples/issuer_cwt.edn}
 ~~~
+
 {: #fig-issued-smd-cwt title="Issued SMD-CWT with all disclosures"}
 
 ## Content-Type
@@ -409,6 +419,7 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
 
 Leaf: 0     1     2     3     4     5     6     7
 ~~~
+
 {: #fig-presentation-tree title="Merkle Tree of a Presentation"}
 
 In the following examples, `hash<<X>>` denotes the hash of the entry `X` when `X` is a leaf, and the `MTH` of the
@@ -423,6 +434,7 @@ The copath of `A` consists of nodes 2 (`B`), 5 (`K`), and 11 (`S`). `B` is not v
   hash<<B>>,
 ]
 ~~~
+
 {: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
 
 The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not visited: its hash is appended. `J` and
@@ -434,6 +446,7 @@ The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not v
   hash<<C>>,
 ]
 ~~~
+
 {: #fig-merkle-proof-leaf-d title="Merkle Proof of D"}
 
 The copath of `E` consists of nodes 10 (`d1`), 13 (`M`), and 3 (`R`). `d1` and `M` are not visited: their hashes are
@@ -446,6 +459,7 @@ appended. `R` is visited: it is skipped. The Merkle proof for `E` is therefore:
   hash<<M>>,
 ]
 ~~~
+
 {: #fig-merkle-proof-leaf-e title="Merkle Proof of E"}
 
 The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains 4 hashes. The hashes of `J`, `K`, `R`,
@@ -458,6 +472,7 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains
   [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>> ]  / "E" /
 ]
 ~~~
+
 {: #fig-disclosure-proof title="Disclosure Proof"}
 
 If the Holder presents all the non-Decoy entries `A` to `E` of {{fig-presentation-tree}} instead, every copath node of
@@ -488,11 +503,10 @@ The Verifier proceeds as follows:
     3. Verify that this Redacted Entry matches the type of the container: a `salted-merkle-claim` if the container
        is a map, or a `salted-merkle-element` if it is an array, as defined in {{cddl-salted-array}}. In
        particular, a Redacted Entry of a Decoy, which only contains a salt, is rejected.
-3. Verify that the node indexes of the Redacted Entries are strictly increasing from the first Merkle proof to the
-   last one.
-4. Initialize a visited set with the node indexes of the presented leaves and of all their ancestors.
-5. Maintain a table associating node indexes with hashes, initially empty.
-6. For each Merkle proof:
+3. Verify that the node indexes of the Redacted Entries are sorted in increasing order.
+4. Initialize a visited set with the node indexes of the presented leaves and of all their ancestors. Also maintain a
+   table associating node indexes with hashes, initially empty.
+5. For each Merkle proof:
     1. Remove the node index from the Redacted Entry. The remaining array is an SMD-CWT entry: compute its hash as
        described in {{merkle-root-hash}} and record it for the leaf in the table.
     2. Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:
@@ -500,11 +514,13 @@ The Verifier proceeds as follows:
         2. Otherwise, take the next hash of the Merkle proof, record it for that node in the table, and add the node to
            the visited set. If the Merkle proof has no hash left, the validation fails.
     3. Verify that all the hashes of the Merkle proof have been consumed. If not, the validation fails.
-7. Compute the hash of the root, where the hash of a node is the hash recorded for that node in the table if there is
-   one, and otherwise the hash of the concatenation of the hashes of its left and right children, in that order. If
-   a leaf with no hash recorded in the table is reached, the validation fails.
-8. Verify that the hash of the root is equal to the root hash in the `redacted_root_hash`.
-9. If any of these verifications fails, the validation of the whole Disclosure Proof fails.
+6. Compute the hash of the root by walking down the tree from the root. For each node reached:
+    1. If the table records a hash for this node, this is its hash, and its subtree is not walked.
+    2. Otherwise, if this node is a leaf, the validation fails.
+    3. Otherwise, walk its left child and then its right child. Its hash is the hash of the concatenation of their
+       hashes, the hash of the left child coming first.
+7. Verify that the hash of the root is equal to the root hash in the `redacted_root_hash`.
+8. If any of these verifications fails, the validation of the whole Disclosure Proof fails.
 
 Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set initially contains nodes 0, 1, 3, 5, 6, 7,
 8, 9, and 11. The Verifier then:
@@ -516,9 +532,11 @@ Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set ini
 3. Processes the Merkle proof of `E`: it records `hash<<E>>` for node 8, `hash<<d1>>` for node 10, and `hash<<M>>` for
    node 13. Node 3 is visited.
 4. Computes the hash of the root. The visited set now contains nodes 0 to 11 and 13, and the table associates nodes with
-   hashes `[(0, A), (2, B), (4, C), (6, D), (8, E), (10, d1), (13, M)]`. `V` (node 7) is computed from `R` (node 3) and
-   `S` (node 11), `R` from `J` (node 1) and `K` (node 5), `S` from `L` (node 9) and `M`, and `J`, `K`, and `L` from the
-   hashes recorded for nodes 0 and 2, 4 and 6, and 8 and 10.
+   hashes `[(0, A), (2, B), (4, C), (6, D), (8, E), (10, d1), (13, M)]`. The root `V` (node 7) is not in the
+   table, so the Verifier walks down to `R` (node 3) and `S` (node 11), which are not in the table either. Under `R`,
+   `J` (node 1) and `K` (node 5) are computed from nodes 0 and 2, and 4 and 6. Under `S`, `L` (node 9) is computed from
+   nodes 8 and 10, and `M` (node 13) is in the table. `R` is then computed from `J` and `K`, `S` from `L` and `M`, and
+   `V` from `R` and `S`.
 5. Verifies that `hash<<V>>` is equal to the root hash in the `redacted_root_hash`.
 
 # Benefits over SD-CWT
@@ -654,9 +672,11 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
+
 {: #cddl-schema title="A complete CDDL description of SMD-CWT"}
 
 # Acknowledgments
+
 {:numbered="false"}
 
 TODO acknowledge.
