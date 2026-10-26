@@ -50,7 +50,6 @@ author:
 
 normative:
   SD-CWT: I-D.draft-ietf-spice-sd-cwt-08
-  RFC9162: CT
 
 informative:
 
@@ -147,7 +146,6 @@ requested and, in addition, supports the generation of SMD-CWTs.
     }
 }
 ~~~
-
 {: #fig-cwt-claimset-example title="CWT Claims Set"}
 
 ## Pre-Issuance {#tbr-tag}
@@ -179,7 +177,6 @@ greater than the number of claims to redact, but MUST NOT be lower.
     }
 }])
 ~~~
-
 {: #fig-cwt-claimset-pre-issuance title="CWT Claims Set Before Issuance"}
 
 For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
@@ -212,7 +209,6 @@ Node: 0  1  2  3  4  5  6
 
 Leaf: 0     1     2     3
 ~~~
-
 {: #fig-merkle-tree-example title="A 3-Claim Merkle Tree"}
 
 In {{fig-cwt-claimset-pre-issuance}}, the redaction of the "inspection_location" claim places the "country" claim at
@@ -252,7 +248,6 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 
 Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15
 ~~~
-
 {: #fig-placing-decoys title="Placing Decoys"}
 
 In {{fig-placing-decoys}}, the tree contains 9 entries. Decoys (`d`) are placed as follows:
@@ -293,7 +288,6 @@ redacted_root_hash = [
   bstr, ; root hash
 ]
 ~~~
-
 {: #redacted-root-hash title="Redacted Root Hash"}
 
 If the redaction occurs in a map, the `redacted_root_hash` is placed in the `redacted_claim_hash` claim.
@@ -301,7 +295,6 @@ If the redaction occurs in a map, the `redacted_root_hash` is placed in the `red
 ~~~ cddl
 / redacted_claim_hash / simple(60) : [ uint, bstr ] / redacted_root_hash /
 ~~~
-
 {: #redacted-claim-hash title="Redacted Claim Hash"}
 
 If the redaction occurs in an array, the root hash is placed in an `redacted_element_hash` element appended to the
@@ -313,7 +306,6 @@ array, after the elements that are not redacted.
     89([ uint, bstr ]) / root hash of item 0 and 2 /
 ],
 ~~~
-
 {: #redacted-element-hash title="Redacted Element Hash"}
 
 ## Disclosure {#disclosure}
@@ -338,7 +330,6 @@ array, after the elements that are not redacted.
     ]
 ]>>
 ~~~
-
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a Disclosure is an array of all redacted elements of a given container (either a CBOR map or array).
@@ -352,7 +343,6 @@ parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 ; an array of bstr-encoded Salted Disclosed Claims
 {::include ./cddl/salted-array.cddl}
 ~~~
-
 {: #cddl-salted-array title="CDDL of Salted Disclosed Claims"}
 
 {{fig-issued-smd-cwt}} shows the SMD-CWT issued from {{fig-cwt-claimset-pre-issuance}}. Each of the three containers
@@ -362,7 +352,6 @@ tagged with the To Be Redacted Root Tag is replaced with a Redacted Root Hash, a
 ~~~ cbor-diag
 {::include ./examples/issuer_cwt.edn}
 ~~~
-
 {: #fig-issued-smd-cwt title="Issued SMD-CWT with all disclosures"}
 
 ## Content-Type
@@ -420,7 +409,6 @@ Node: 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14
 
 Leaf: 0     1     2     3     4     5     6     7
 ~~~
-
 {: #fig-presentation-tree title="Merkle Tree of a Presentation"}
 
 In the following examples, `hash<<X>>` denotes the hash of the entry `X` when `X` is a leaf, and the `MTH` of the
@@ -435,7 +423,6 @@ The copath of `A` consists of nodes 2 (`B`), 5 (`K`), and 11 (`S`). `B` is not v
   hash<<B>>,
 ]
 ~~~
-
 {: #fig-merkle-proof-leaf-a title="Merkle Proof of A"}
 
 The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not visited: its hash is appended. `J` and
@@ -447,7 +434,6 @@ The copath of `D` consists of nodes 4 (`C`), 1 (`J`), and 11 (`S`). `C` is not v
   hash<<C>>,
 ]
 ~~~
-
 {: #fig-merkle-proof-leaf-d title="Merkle Proof of D"}
 
 The copath of `E` consists of nodes 10 (`d1`), 13 (`M`), and 3 (`R`). `d1` and `M` are not visited: their hashes are
@@ -460,7 +446,6 @@ appended. `R` is visited: it is skipped. The Merkle proof for `E` is therefore:
   hash<<M>>,
 ]
 ~~~
-
 {: #fig-merkle-proof-leaf-e title="Merkle Proof of E"}
 
 The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains 4 hashes. The hashes of `J`, `K`, `R`,
@@ -473,7 +458,6 @@ The resulting Disclosure Proof is shown in {{fig-disclosure-proof}}. It contains
   [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash<<d1>>, hash<<M>> ]  / "E" /
 ]
 ~~~
-
 {: #fig-disclosure-proof title="Disclosure Proof"}
 
 If the Holder presents all the non-Decoy entries `A` to `E` of {{fig-presentation-tree}} instead, every copath node of
@@ -670,11 +654,9 @@ The following completed registration template is provided:
 {::include ./cddl/salted-array.cddl}
 {::include ./cddl/redacted-simple-tag.cddl}
 ~~~~~~~~~~
-
 {: #cddl-schema title="A complete CDDL description of SMD-CWT"}
 
 # Acknowledgments
-
 {:numbered="false"}
 
 TODO acknowledge.
