@@ -1,0 +1,2749 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT)</title>
+<meta content="Beltram Maldant" name="author">
+<meta content="
+       This document specifies an extension to Selective Disclosure CBOR Web
+Tokens (SD-CWT) that reduces their size and improves their privacy
+properties. In this extension, the individual hashes of the redacted
+claims of a map or an array are replaced with the root hash of a Merkle
+tree, and disclosed claims are presented with a Merkle proof. 
+    " name="description">
+<meta content="xml2rfc 3.34.1" name="generator">
+<meta content="cose" name="keyword">
+<meta content="cwt" name="keyword">
+<meta content="selective disclosure" name="keyword">
+<meta content="draft-maldant-spice-smd-cwt-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.1
+    Python 3.14.8
+    ConfigArgParse 1.8.0
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.13.4
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.9.2
+-->
+<link href="draft-maldant-spice-smd-cwt.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">SMD-CWT</td>
+<td class="right">October 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Maldant</td>
+<td class="center">Expires 29 April 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Secure Patterns for Internet CrEdentials</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-maldant-spice-smd-cwt-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-10-26" class="published">26 October 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">B. Maldant</div>
+<div class="org">SimpleLogin</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT)</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document specifies an extension to Selective Disclosure CBOR Web
+Tokens (SD-CWT) that reduces their size and improves their privacy
+properties. In this extension, the individual hashes of the redacted
+claims of a map or an array are replaced with the root hash of a Merkle
+tree, and disclosed claims are presented with a Merkle proof.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://beltram.github.io/draft-maldant-spice-smd-cwt/draft-maldant-spice-smd-cwt.html">https://beltram.github.io/draft-maldant-spice-smd-cwt/draft-maldant-spice-smd-cwt.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-maldant-spice-smd-cwt/">https://datatracker.ietf.org/doc/draft-maldant-spice-smd-cwt/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        Secure Patterns for Internet CrEdentials Working Group mailing list (<span><a href="mailto:spice@ietf.org">mailto:spice@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/spice/">https://mailarchive.ietf.org/arch/browse/spice/</a></span>.
+        Subscribe at <span><a href="https://www.ietf.org/mailman/listinfo/spice/">https://www.ietf.org/mailman/listinfo/spice/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/beltram/draft-maldant-spice-smd-cwt">https://github.com/beltram/draft-maldant-spice-smd-cwt</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-overview" class="internal xref">Overview</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-issuance" class="internal xref">Issuance</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-pre-issuance" class="internal xref">Pre-Issuance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-merkle-tree" class="internal xref">Merkle Tree</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2.2.1">
+                    <p id="section-toc.1-1.4.2.2.2.1.1"><a href="#section-4.2.1" class="auto internal xref">4.2.1</a>.  <a href="#name-decoys" class="internal xref">Decoys</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-computing-the-merkle-root-h" class="internal xref">Computing the Merkle Root Hash</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.1">
+                    <p id="section-toc.1-1.4.2.3.2.1.1"><a href="#section-4.3.1" class="auto internal xref">4.3.1</a>.  <a href="#name-inserting-the-merkle-root-h" class="internal xref">Inserting the Merkle Root Hash in the Payload</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-disclosure" class="internal xref">Disclosure</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-content-type" class="internal xref">Content-Type</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-presentation" class="internal xref">Presentation</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-verification" class="internal xref">Verification</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-benefits-over-sd-cwt" class="internal xref">Benefits over SD-CWT</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-smaller-tokens" class="internal xref">Smaller Tokens</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-privacy" class="internal xref">Privacy</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-free-decoys" class="internal xref">Free Decoys</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-verification-time" class="internal xref">Verification Time</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-leakage-of-claim-order" class="internal xref">Leakage of Claim Order</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-cbor-tags" class="internal xref">CBOR Tags</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1.2.1">
+                    <p id="section-toc.1-1.10.2.1.2.1.1"><a href="#section-10.1.1" class="auto internal xref">10.1.1</a>.  <a href="#name-to-be-redacted-root-tag" class="internal xref">To Be Redacted Root Tag</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-media-types" class="internal xref">Media Types</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2.2.1">
+                    <p id="section-toc.1-1.10.2.2.2.1.1"><a href="#section-10.2.1" class="auto internal xref">10.2.1</a>.  <a href="#name-application-smd-cwtsd-cwt" class="internal xref">application/smd-cwt+sd-cwt</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2.2.2">
+                    <p id="section-toc.1-1.10.2.2.2.2.1"><a href="#section-10.2.2" class="auto internal xref">10.2.2</a>.  <a href="#name-application-smd-kbtsd-kbt" class="internal xref">application/smd-kbt+sd-kbt</a></p>
+</li>
+                </ul>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-complete-cddl-schema" class="internal xref">Complete CDDL Schema</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="intro">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">This document defines Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT), an extension to SD-CWT <span>[<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">SD-CWT provides an efficient mechanism by which a Holder controls which
+claims it presents to a Verifier, thereby improving the privacy of the
+Holder. However, when the presentation is sparse and only a subset of the claims is disclosed, a
+Verifier learns the total number of claims, reducing the
+privacy benefit of selective disclosure. Furthermore, each redacted claim
+adds 34 bytes to the presented token (SD-KBT), even though the claim
+itself is not disclosed to the Verifier.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">To address both issues, this document specifies that, rather than hashing
+each claim individually and placing the resulting hashes in a CBOR array,
+the claims of each map or array are placed in a Merkle tree and only the root hash of that tree
+is included in the SD-CWT. A presentation of the token then includes only
+a Merkle proof attesting to the integrity of the disclosed claims. The
+size of this proof is logarithmic in the number of claims, whereas the
+size of an enumeration of all redacted claims is linear in that number.<a href="#section-1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terminology">
+<section id="section-2">
+      <h2 id="name-terminology">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">The CBOR examples in this document are shown in CBOR Extended Diagnostic Notation (EDN) <span>[<a href="#I-D.ietf-cbor-edn-literals" class="cite xref">I-D.ietf-cbor-edn-literals</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">Data model constraints are described using the Concise Data Definition Language (CDDL) <span>[<a href="#RFC8610" class="cite xref">RFC8610</a>]</span>.<a href="#section-2-3" class="pilcrow">¶</a></p>
+<p id="section-2-4">This document uses terms from CWT <span>[<a href="#RFC8392" class="cite xref">RFC8392</a>]</span>, COSE <span>[<a href="#RFC9052" class="cite xref">RFC9052</a>]</span> <span>[<a href="#RFC9053" class="cite xref">RFC9053</a>]</span>,
+and JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<p id="section-2-5">The terms Claim Name, Claim Key, and Claim Value are defined in <span>[<a href="#RFC8392" class="cite xref">RFC8392</a>]</span>.<a href="#section-2-5" class="pilcrow">¶</a></p>
+<p id="section-2-6">This document defines the following terms:<a href="#section-2-6" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-7">
+        <dt id="section-2-7.1">Selective Merkle Disclosure CBOR Web Token (SMD-CWT):</dt>
+        <dd style="margin-left: 1.5em" id="section-2-7.2">
+          <p id="section-2-7.2.1">An SD-CWT containing claims that can be selectively disclosed using a Merkle proof.<a href="#section-2-7.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-7.3">Selective Merkle Disclosure Key Binding Token (SMD-KBT):</dt>
+        <dd style="margin-left: 1.5em" id="section-2-7.4">
+          <p id="section-2-7.4.1">An SD-KBT used to demonstrate possession of a confirmation method and to present claims with a Merkle proof.<a href="#section-2-7.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-7.5">Copath:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-7.6">
+          <p id="section-2-7.6.1">For a given leaf of a Merkle tree, the siblings of the nodes on the path from that leaf to the root.<a href="#section-2-7.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-2-8">All other terms used in this document have the meaning defined in <span>[<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span>.<a href="#section-2-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="overview">
+<section id="section-3">
+      <h2 id="name-overview">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-overview" class="section-name selfRef">Overview</a>
+      </h2>
+<p id="section-3-1">SMD-CWT is an extension of SD-CWT: every SD-CWT is a valid SMD-CWT, but an SMD-CWT is not necessarily a valid SD-CWT.
+The two differ only in the way redacted claims are authenticated and presented.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">An SD-CWT Issuer enumerates the hashes of all redacted claims, either in the <code>redacted_claim_keys</code> array of a map, or in
+place of the redacted elements of an array. In contrast, an SMD-CWT Issuer places these hashes at the leaves of a
+left-balanced Merkle tree and replaces the set of claims in the original payload with the root hash of that tree.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">A Holder then selectively presents claims to a Verifier in an SMD-KBT by replacing the disclosed claims with proofs of
+their inclusion in the Merkle tree. The root hash of that tree is authenticated by the Issuer in the SMD-CWT.<a href="#section-3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="smd-cwt-definition">
+<section id="section-4">
+      <h2 id="name-issuance">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-issuance" class="section-name selfRef">Issuance</a>
+      </h2>
+<p id="section-4-1">An SMD-CWT Issuer is also an SD-CWT Issuer: it <span class="bcp14">MUST</span> be capable of encoding and signing a regular SD-CWT when
+requested and, in addition, supports the generation of SMD-CWTs.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2"><a href="#fig-cwt-claimset-example" class="auto internal xref">Figure 1</a> shows an example CWT payload. Common claims are omitted for brevity.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<span id="name-cwt-claims-set"></span><div id="fig-cwt-claimset-example">
+<figure id="figure-1">
+        <div class="lang-cbor-diag sourcecode" id="section-4-3.1">
+<pre>
+{
+    "most_recent_inspection_passed": true,
+    "inspector_license_number": "ABCD-123456",
+    "inspection_dates" : [
+        1549560720,   / 2019-02-07T17:32:00 /
+        1612498440,   / 2021-02-04T20:14:00 /
+        1674004740,   / 2023-01-17T17:19:00 /
+    ],
+    "inspection_location": {
+        "country": "us",            / United States /
+        "region": "ca",             / California /
+        "postal_code": "94188"
+    }
+}
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-cwt-claims-set" class="selfRef">CWT Claims Set</a>
+        </figcaption></figure>
+</div>
+<div id="tbr-tag">
+<section id="section-4.1">
+        <h3 id="name-pre-issuance">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-pre-issuance" class="section-name selfRef">Pre-Issuance</a>
+        </h3>
+<p id="section-4.1-1">An SMD-CWT Issuer <span class="bcp14">MUST</span> support the <code>To Be Redacted Tag</code> and the <code>To Be Decoy Tag</code>, both of which are defined in
+<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-17.3.1" class="relref">Section 17.3.1</a> of [<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The <code>To Be Redacted Root Tag</code> (tag 59), defined in <a href="#tbrrt" class="auto internal xref">Section 10.1.1</a>, indicates to the Issuer that a claim or an array element
+is intended to be selectively disclosed with a Disclosure Proof. This tag wraps the element to be redacted in an array
+of size 2. The first element of this array is the base-2 logarithm of the size of the Merkle tree used for redaction.
+This size <span class="bcp14">MAY</span> be
+greater than the number of claims to redact, but <span class="bcp14">MUST NOT</span> be lower.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.1-3"><a href="#fig-cwt-claimset-pre-issuance" class="auto internal xref">Figure 2</a> shows the example payload with the corresponding annotations.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<span id="name-cwt-claims-set-before-issua"></span><div id="fig-cwt-claimset-pre-issuance">
+<figure id="figure-2">
+          <div class="lang-cbor-diag sourcecode" id="section-4.1-4.1">
+<pre>
+59([3, { /merkle-redacted of size 8/
+    "most_recent_inspection_passed": true, /not-redacted/
+    "inspector_license_number": 58("ABCD-123456"), /redacted/
+    59([3, "inspection_dates"]) : [ /merkle-redacted of size 8/
+        58(1549560720), /redacted/
+        58(1612498440), /redacted/
+        58(1674004740), /redacted/
+    ],
+    59([2, "inspection_location"]): { /merkle-redacted of size 4/
+        "country": 58("us"),   /redacted/
+        "region": 58("ca"),    /redacted/
+        "postal_code": "94188" /not-redacted/
+    }
+}])
+</pre>
+</div>
+<figcaption><a href="#figure-2" class="selfRef">Figure 2</a>:
+<a href="#name-cwt-claims-set-before-issua" class="selfRef">CWT Claims Set Before Issuance</a>
+          </figcaption></figure>
+</div>
+<p id="section-4.1-5">For each occurrence of the To Be Redacted Root Tag, at any nesting level, a Merkle tree is built, and all elements of
+the tagged array or map are placed at its leaves.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="merkle-tree">
+<section id="section-4.2">
+        <h3 id="name-merkle-tree">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-merkle-tree" class="section-name selfRef">Merkle Tree</a>
+        </h3>
+<p id="section-4.2-1">This specification uses binary Merkle trees similar to those defined in <span><a href="https://rfc-editor.org/rfc/rfc9162#section-2.1.1" class="relref">Section 2.1.1</a> of [<a href="#RFC9162" class="cite xref">RFC9162</a>]</span>, with one
+difference: no domain separation prefix is added to the leaves and the nodes (see <a href="#merkle-root-hash" class="auto internal xref">Section 4.3</a>). A higher
+branching factor would provide neither additional benefit nor the desired properties.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">The Merkle tree is a left-balanced perfect binary tree, as shown in <a href="#fig-merkle-tree-example" class="auto internal xref">Figure 3</a>. Unbalanced trees are
+not used, as they are vulnerable to forgery attacks. Perfect binary trees are also easier to represent in memory, and
+their node indexes are easier to compute, as explained in <span><a href="https://rfc-editor.org/rfc/rfc9420#appendix-C" class="relref">Appendix C</a> of [<a href="#RFC9420" class="cite xref">RFC9420</a>]</span>.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<span id="name-a-3-claim-merkle-tree"></span><div id="fig-merkle-tree-example">
+<figure id="figure-3">
+          <div id="section-4.2-3.1">
+            <div class="alignLeft art-svg artwork" id="section-4.2-3.1.1">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="272" viewBox="0 0 272 272" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+                <path d="M 56,160 L 56,176" fill="none" stroke="black"></path>
+                <path d="M 104,152 L 104,176" fill="none" stroke="black"></path>
+                <path d="M 128,48 L 128,64" fill="none" stroke="black"></path>
+                <path d="M 152,152 L 152,176" fill="none" stroke="black"></path>
+                <path d="M 200,152 L 200,176" fill="none" stroke="black"></path>
+                <path d="M 96,64 L 160,64" fill="none" stroke="black"></path>
+                <path d="M 80,96 L 100,136" fill="none" stroke="black"></path>
+                <path d="M 160,64 L 172,88" fill="none" stroke="black"></path>
+                <path d="M 180,104 L 196,136" fill="none" stroke="black"></path>
+                <path d="M 64,128 L 96,64" fill="none" stroke="black"></path>
+                <path d="M 156,136 L 172,104" fill="none" stroke="black"></path>
+                <g class="text">
+                  <text x="132" y="36">root</text>
+                  <text x="52" y="100">h(h(A)</text>
+                  <text x="108" y="100">|h(B))</text>
+                  <text x="216" y="100">h(h(C)||h(d))</text>
+                  <text x="52" y="148">h(A)</text>
+                  <text x="108" y="148">h(B)</text>
+                  <text x="156" y="148">h(C)</text>
+                  <text x="204" y="148">h(d)</text>
+                  <text x="56" y="196">A</text>
+                  <text x="104" y="196">B</text>
+                  <text x="152" y="196">C</text>
+                  <text x="192" y="196">d</text>
+                  <text x="24" y="228">Node:</text>
+                  <text x="56" y="228">0</text>
+                  <text x="80" y="228">1</text>
+                  <text x="104" y="228">2</text>
+                  <text x="128" y="228">3</text>
+                  <text x="152" y="228">4</text>
+                  <text x="176" y="228">5</text>
+                  <text x="200" y="228">6</text>
+                  <text x="24" y="260">Leaf:</text>
+                  <text x="56" y="260">0</text>
+                  <text x="104" y="260">1</text>
+                  <text x="152" y="260">2</text>
+                  <text x="200" y="260">3</text>
+                </g>
+              </svg><a href="#section-4.2-3.1.1" class="pilcrow">¶</a>
+</div>
+</div>
+<figcaption><a href="#figure-3" class="selfRef">Figure 3</a>:
+<a href="#name-a-3-claim-merkle-tree" class="selfRef">A 3-Claim Merkle Tree</a>
+          </figcaption></figure>
+</div>
+<p id="section-4.2-4">In <a href="#fig-cwt-claimset-pre-issuance" class="auto internal xref">Figure 2</a>, the redaction of the "inspection_location" claim places the "country" claim at
+node index 0 and the "region" claim at node index 2. Since a size of 2 is requested, the tree has a height of 2 and its
+last node index is 6, as in <a href="#fig-merkle-tree-example" class="auto internal xref">Figure 3</a>.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
+<div id="decoys">
+<section id="section-4.2.1">
+          <h4 id="name-decoys">
+<a href="#section-4.2.1" class="section-number selfRef">4.2.1. </a><a href="#name-decoys" class="section-name selfRef">Decoys</a>
+          </h4>
+<p id="section-4.2.1-1">Decoys serve a different purpose than in SD-CWT: they do not directly hinder the Verifier's inference of private
+information. Instead, they act as a blinding factor that prevents a Verifier from inferring the number of leaves, since
+the hash of a blank leaf is the hash of zero bytes. Decoys are therefore mandatory.<a href="#section-4.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.2.1-2">Replacing every blank leaf with a Decoy would needlessly inflate the SMD-CWT. Instead, for each node in the Copath of
+the
+rightmost entry, the leftmost blank leaf of the subtree rooted at that node <span class="bcp14">MUST</span> be replaced with a Decoy. When the
+entries fill all the leaves of the tree, no Decoy is added.<a href="#section-4.2.1-2" class="pilcrow">¶</a></p>
+<span id="name-placing-decoys"></span><div id="fig-placing-decoys">
+<figure id="figure-4">
+            <div id="section-4.2.1-3.1">
+              <div class="alignLeft art-svg artwork" id="section-4.2.1-3.1.1">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="352" width="792" viewBox="0 0 792 352" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+                  <path d="M 128,176 L 128,192" fill="none" stroke="black"></path>
+                  <path d="M 224,64 L 224,128" fill="none" stroke="black"></path>
+                  <path d="M 320,176 L 320,192" fill="none" stroke="black"></path>
+                  <path d="M 416,48 L 416,64" fill="none" stroke="black"></path>
+                  <path d="M 512,176 L 512,192" fill="none" stroke="black"></path>
+                  <path d="M 608,64 L 608,80" fill="none" stroke="black"></path>
+                  <path d="M 608,112 L 608,128" fill="none" stroke="black"></path>
+                  <path d="M 704,176 L 704,192" fill="none" stroke="black"></path>
+                  <path d="M 224,64 L 608,64" fill="none" stroke="black"></path>
+                  <path d="M 144,128 L 304,128" fill="none" stroke="black"></path>
+                  <path d="M 528,128 L 688,128" fill="none" stroke="black"></path>
+                  <path d="M 96,192 L 160,192" fill="none" stroke="black"></path>
+                  <path d="M 288,192 L 352,192" fill="none" stroke="black"></path>
+                  <path d="M 480,192 L 544,192" fill="none" stroke="black"></path>
+                  <path d="M 672,192 L 736,192" fill="none" stroke="black"></path>
+                  <path d="M 88,240 L 96,256" fill="none" stroke="black"></path>
+                  <path d="M 160,192 L 168,208" fill="none" stroke="black"></path>
+                  <path d="M 184,240 L 192,256" fill="none" stroke="black"></path>
+                  <path d="M 280,240 L 288,256" fill="none" stroke="black"></path>
+                  <path d="M 304,128 L 312,144" fill="none" stroke="black"></path>
+                  <path d="M 352,192 L 360,208" fill="none" stroke="black"></path>
+                  <path d="M 376,240 L 384,256" fill="none" stroke="black"></path>
+                  <path d="M 472,240 L 480,256" fill="none" stroke="black"></path>
+                  <path d="M 544,192 L 552,208" fill="none" stroke="black"></path>
+                  <path d="M 568,240 L 576,256" fill="none" stroke="black"></path>
+                  <path d="M 664,240 L 672,256" fill="none" stroke="black"></path>
+                  <path d="M 688,128 L 696,144" fill="none" stroke="black"></path>
+                  <path d="M 736,192 L 744,208" fill="none" stroke="black"></path>
+                  <path d="M 760,240 L 768,256" fill="none" stroke="black"></path>
+                  <path d="M 64,256 L 72,240" fill="none" stroke="black"></path>
+                  <path d="M 88,208 L 96,192" fill="none" stroke="black"></path>
+                  <path d="M 136,144 L 144,128" fill="none" stroke="black"></path>
+                  <path d="M 160,256 L 168,240" fill="none" stroke="black"></path>
+                  <path d="M 256,256 L 264,240" fill="none" stroke="black"></path>
+                  <path d="M 280,208 L 288,192" fill="none" stroke="black"></path>
+                  <path d="M 352,256 L 360,240" fill="none" stroke="black"></path>
+                  <path d="M 448,256 L 456,240" fill="none" stroke="black"></path>
+                  <path d="M 472,208 L 480,192" fill="none" stroke="black"></path>
+                  <path d="M 520,144 L 528,128" fill="none" stroke="black"></path>
+                  <path d="M 544,256 L 552,240" fill="none" stroke="black"></path>
+                  <path d="M 640,256 L 648,240" fill="none" stroke="black"></path>
+                  <path d="M 664,208 L 672,192" fill="none" stroke="black"></path>
+                  <path d="M 736,256 L 744,240" fill="none" stroke="black"></path>
+                  <polygon class="arrowhead" points="232,104 220,98.4 220,109.6" fill="black" transform="rotate(90,224,104)"></polygon>
+                  <g class="text">
+                    <text x="416" y="36">X</text>
+                    <text x="608" y="100">W</text>
+                    <text x="128" y="164">R</text>
+                    <text x="320" y="164">S</text>
+                    <text x="512" y="164">T</text>
+                    <text x="704" y="164">U</text>
+                    <text x="80" y="228">J</text>
+                    <text x="176" y="228">K</text>
+                    <text x="272" y="228">L</text>
+                    <text x="368" y="228">M</text>
+                    <text x="464" y="228">N</text>
+                    <text x="560" y="228">O</text>
+                    <text x="656" y="228">P</text>
+                    <text x="752" y="228">Q</text>
+                    <text x="56" y="276">A</text>
+                    <text x="104" y="276">B</text>
+                    <text x="152" y="276">C</text>
+                    <text x="200" y="276">D</text>
+                    <text x="248" y="276">E</text>
+                    <text x="296" y="276">F</text>
+                    <text x="344" y="276">G</text>
+                    <text x="392" y="276">H</text>
+                    <text x="440" y="276">I</text>
+                    <text x="488" y="276">d</text>
+                    <text x="536" y="276">d</text>
+                    <text x="584" y="276">_</text>
+                    <text x="632" y="276">d</text>
+                    <text x="680" y="276">_</text>
+                    <text x="728" y="276">_</text>
+                    <text x="776" y="276">_</text>
+                    <text x="24" y="308">Node:</text>
+                    <text x="56" y="308">0</text>
+                    <text x="80" y="308">1</text>
+                    <text x="104" y="308">2</text>
+                    <text x="128" y="308">3</text>
+                    <text x="152" y="308">4</text>
+                    <text x="176" y="308">5</text>
+                    <text x="200" y="308">6</text>
+                    <text x="224" y="308">7</text>
+                    <text x="248" y="308">8</text>
+                    <text x="272" y="308">9</text>
+                    <text x="300" y="308">10</text>
+                    <text x="324" y="308">11</text>
+                    <text x="348" y="308">12</text>
+                    <text x="372" y="308">13</text>
+                    <text x="396" y="308">14</text>
+                    <text x="420" y="308">15</text>
+                    <text x="444" y="308">16</text>
+                    <text x="468" y="308">17</text>
+                    <text x="492" y="308">18</text>
+                    <text x="516" y="308">19</text>
+                    <text x="540" y="308">20</text>
+                    <text x="564" y="308">21</text>
+                    <text x="588" y="308">22</text>
+                    <text x="612" y="308">23</text>
+                    <text x="636" y="308">24</text>
+                    <text x="660" y="308">25</text>
+                    <text x="684" y="308">26</text>
+                    <text x="708" y="308">27</text>
+                    <text x="732" y="308">28</text>
+                    <text x="756" y="308">29</text>
+                    <text x="780" y="308">30</text>
+                    <text x="24" y="340">Leaf:</text>
+                    <text x="56" y="340">0</text>
+                    <text x="104" y="340">1</text>
+                    <text x="152" y="340">2</text>
+                    <text x="200" y="340">3</text>
+                    <text x="248" y="340">4</text>
+                    <text x="296" y="340">5</text>
+                    <text x="344" y="340">6</text>
+                    <text x="392" y="340">7</text>
+                    <text x="440" y="340">8</text>
+                    <text x="488" y="340">9</text>
+                    <text x="540" y="340">10</text>
+                    <text x="588" y="340">11</text>
+                    <text x="636" y="340">12</text>
+                    <text x="684" y="340">13</text>
+                    <text x="732" y="340">14</text>
+                    <text x="780" y="340">15</text>
+                  </g>
+                </svg><a href="#section-4.2.1-3.1.1" class="pilcrow">¶</a>
+</div>
+</div>
+<figcaption><a href="#figure-4" class="selfRef">Figure 4</a>:
+<a href="#name-placing-decoys" class="selfRef">Placing Decoys</a>
+            </figcaption></figure>
+</div>
+<p id="section-4.2.1-4">In <a href="#fig-placing-decoys" class="auto internal xref">Figure 4</a>, the tree contains 9 entries. Decoys (<code>d</code>) are placed as follows:<a href="#section-4.2.1-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.2.1-5">
+<li id="section-4.2.1-5.1">
+              <p id="section-4.2.1-5.1.1">The rightmost entry of the tree is <code>I</code>.<a href="#section-4.2.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-4.2.1-5.2">
+              <p id="section-4.2.1-5.2.1">Its copath consists of nodes <code>18</code>, <code>21</code>, <code>27</code>, and <code>7</code> (<code>_</code>, <code>O</code>, <code>U</code>, and <code>V</code>).<a href="#section-4.2.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-4.2.1-5.3">
+              <p id="section-4.2.1-5.3.1">For each node in this copath, the leftmost blank leaf of its subtree is replaced with a Decoy. A blank copath node
+that is itself a leaf, such as <code>18</code>, is replaced directly.<a href="#section-4.2.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-4.2.1-5.4">
+              <p id="section-4.2.1-5.4.1">Consequently, nodes <code>18</code>, <code>20</code>, and <code>24</code> are replaced with Decoys.<a href="#section-4.2.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+</section>
+</div>
+</section>
+</div>
+<div id="merkle-root-hash">
+<section id="section-4.3">
+        <h3 id="name-computing-the-merkle-root-h">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-computing-the-merkle-root-h" class="section-name selfRef">Computing the Merkle Root Hash</a>
+        </h3>
+<p id="section-4.3-1">The Issuer then computes the root hash of the Merkle tree as follows:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.3-2">
+<li id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">Each entry is encoded as a <code>bstr-encoded-salted-merkle-entry</code>, as defined in <a href="#cddl-salted-array" class="auto internal xref">Figure 9</a>.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">The resulting bytes are hashed using the hash algorithm indicated by <code>sd_alg</code> in the protected header.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.3">
+            <p id="section-4.3-2.3.1">The hash of a parent node is the hash of the concatenation of the hashes of its two children, the hash of the left
+child coming first.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.3-3">This operation is denoted <code>MTH</code> (Merkle Tree Hash), similarly to the one described in <span><a href="https://rfc-editor.org/rfc/rfc9162#section-2.1.1" class="relref">Section 2.1.1</a> of [<a href="#RFC9162" class="cite xref">RFC9162</a>]</span>.
+Unlike in <span>[<a href="#RFC9162" class="cite xref">RFC9162</a>]</span>, no domain separation prefix is added to the leaves and the nodes: since the tree is balanced and
+its size is authenticated by the Issuer, all leaves are at the same depth. The <code>MTH</code> of an interior node therefore
+cannot be used as the hash of a leaf, and second preimage resistance between leaves and nodes is not required.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<div id="inserting-the-merkle-root-hash-in-the-payload">
+<section id="section-4.3.1">
+          <h4 id="name-inserting-the-merkle-root-h">
+<a href="#section-4.3.1" class="section-number selfRef">4.3.1. </a><a href="#name-inserting-the-merkle-root-h" class="section-name selfRef">Inserting the Merkle Root Hash in the Payload</a>
+          </h4>
+<p id="section-4.3.1-1">The root hash is then inserted into the original payload in place of the redacted claims. These claims are declared
+within a container, which is either a map or an array. Since the container itself is annotated with the <code>To Be Redacted
+Root Tag</code>, it cannot contain regular <code>redacted_claim_keys</code> (simple value 59) or redacted array elements (tag 60).<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-2">Regardless of the type of the parent container, the root hash is represented as a <code>redacted_root_hash</code>: an array of two
+elements, the first of which is the logarithmic size of the Merkle tree producing the root hash, and the second of
+which is the root hash itself.<a href="#section-4.3.1-2" class="pilcrow">¶</a></p>
+<span id="name-redacted-root-hash"></span><div id="redacted-root-hash">
+<figure id="figure-5">
+            <div class="lang-cddl sourcecode" id="section-4.3.1-3.1">
+<pre>
+redacted_root_hash = [
+  uint,  ; base-2 logarithm of the number of leaves represented in this root hash
+  bstr, ; root hash
+]
+</pre>
+</div>
+<figcaption><a href="#figure-5" class="selfRef">Figure 5</a>:
+<a href="#name-redacted-root-hash" class="selfRef">Redacted Root Hash</a>
+            </figcaption></figure>
+</div>
+<p id="section-4.3.1-4">If the redaction occurs in a map, the <code>redacted_root_hash</code> is placed in the <code>redacted_claim_hash</code> claim.<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
+<span id="name-redacted-claim-hash"></span><div id="redacted-claim-hash">
+<figure id="figure-6">
+            <div class="lang-cddl sourcecode" id="section-4.3.1-5.1">
+<pre>
+/ redacted_claim_hash / simple(60) : [ uint, bstr ] / redacted_root_hash /
+</pre>
+</div>
+<figcaption><a href="#figure-6" class="selfRef">Figure 6</a>:
+<a href="#name-redacted-claim-hash" class="selfRef">Redacted Claim Hash</a>
+            </figcaption></figure>
+</div>
+<p id="section-4.3.1-6">If the redaction occurs in an array, the root hash is placed in an <code>redacted_element_hash</code> element appended to the
+array, after the elements that are not redacted.<a href="#section-4.3.1-6" class="pilcrow">¶</a></p>
+<span id="name-redacted-element-hash"></span><div id="redacted-element-hash">
+<figure id="figure-7">
+            <div class="lang-cddl sourcecode" id="section-4.3.1-7.1">
+<pre>
+"inspection_dates" : [
+    1612498440, / item 1 not redacted /
+    89([ uint, bstr ]) / root hash of item 0 and 2 /
+],
+</pre>
+</div>
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a>:
+<a href="#name-redacted-element-hash" class="selfRef">Redacted Element Hash</a>
+            </figcaption></figure>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="disclosure">
+<section id="section-4.4">
+        <h3 id="name-disclosure">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-disclosure" class="section-name selfRef">Disclosure</a>
+        </h3>
+<p id="section-4.4-1"><a href="#fig-smd-cwt-disclosures" class="auto internal xref">Figure 8</a> shows the disclosure of the <code>inspection_location</code> claim from
+<a href="#fig-cwt-claimset-example" class="auto internal xref">Figure 1</a>.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<span id="name-smd-cwt-disclosures"></span><div id="fig-smd-cwt-disclosures">
+<figure id="figure-8">
+          <div class="lang-cbor-diag sourcecode" id="section-4.4-2.1">
+<pre>
+&lt;&lt;[
+    [
+        /salt/   h'e39612407e99a347d61442957b3dfdac',
+        /value/  "us",
+        /claim/  "country"
+    ],
+    [
+        /salt/   h'4569990258b25a5267c17a3e3a225ec3',
+        /value/  "ca",
+        /claim/  "region"
+    ],
+    [
+        /salt/   h'e27403129cd88bf8fee4193e65339a35',
+    ]
+]&gt;&gt;
+</pre>
+</div>
+<figcaption><a href="#figure-8" class="selfRef">Figure 8</a>:
+<a href="#name-smd-cwt-disclosures" class="selfRef">SMD-CWT Disclosures</a>
+          </figcaption></figure>
+</div>
+<p id="section-4.4-3">In an SMD-CWT, a Disclosure is an array of all redacted elements of a given container (either a CBOR map or array).
+Each of these elements has the structure described in <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-3.2" class="relref">Section 3.2</a> of [<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span>, except that they are not individually
+wrapped in a CBOR bstr (but the outer disclosure is).<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">This Disclosure, along with all other Disclosures, <span class="bcp14">MUST</span> be placed in the <code>sd_claims</code> unprotected header
+parameter of the SMD-CWT, as defined in <span>[<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span>.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<span id="name-cddl-of-salted-disclosed-cl"></span><div id="cddl-salted-array">
+<figure id="figure-9">
+          <div class="breakable lang-cddl sourcecode" id="section-4.4-5.1">
+<pre>
+; an array of bstr-encoded Salted Disclosed Claims
+; in SMD-CWT
+salted-merkle-array = [ +bstr-encoded-salted-merkle-entry ]
+bstr-encoded-salted-merkle-entry = bstr .cbor salted-merkle-entries
+
+; in SMD-KBT
+salted-array-proofs = [ +bstr-encoded-salted-proof ]
+bstr-encoded-salted-proof = bstr .cbor disclosure-proof
+
+; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
+salted-merkle-entry = salted-claim / salted-element / decoy
+
+salted-merkle-entries = [ +salted-merkle-entry ]
+
+; one Merkle proof per presented leaf, ordered by increasing node index
+disclosure-proof = [ +merkle-proof ]
+
+merkle-proof = [
+  redacted-entry,
+  * bstr             ; hash of a copath node, from the leaf up to the root
+]
+
+; a presented entry prefixed with the node index of its leaf; Decoys are never presented
+redacted-entry = salted-merkle-claim / salted-merkle-element
+salted-merkle-claim = [
+  uint,              ; node index of the leaf
+  bstr .size 16,     ; 128-bit salt
+  any,               ; Claim Value
+  (int / text)       ; Claim Key
+]
+salted-merkle-element = [
+  uint,              ; node index of the leaf
+  bstr .size 16,     ; 128-bit salt
+  any                ; Claim Value
+]
+
+; repeated here
+salted-claim = [
+  bstr .size 16,     ; 128-bit salt
+  any,               ; Claim Value
+  (int / text)       ; Claim Key
+]
+salted-element = [
+  bstr .size 16,     ; 128-bit salt
+  any                ; Claim Value
+]
+decoy = [
+  bstr .size 16      ; 128-bit salt
+]
+
+</pre>
+</div>
+<figcaption><a href="#figure-9" class="selfRef">Figure 9</a>:
+<a href="#name-cddl-of-salted-disclosed-cl" class="selfRef">CDDL of Salted Disclosed Claims</a>
+          </figcaption></figure>
+</div>
+<p id="section-4.4-6"><a href="#fig-issued-smd-cwt" class="auto internal xref">Figure 10</a> shows the SMD-CWT issued from <a href="#fig-cwt-claimset-pre-issuance" class="auto internal xref">Figure 2</a>. Each of the three containers
+tagged with the To Be Redacted Root Tag is replaced with a Redacted Root Hash, and its Disclosure is placed in
+<code>sd_claims</code>:<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+<span id="name-issued-smd-cwt-with-all-dis"></span><div id="fig-issued-smd-cwt">
+<figure id="figure-10">
+          <div class="breakable lang-cbor-diag sourcecode" id="section-4.4-7.1">
+<pre>
+/ cose-sign1 / 18([  / issuer SMD-CWT /
+  / CWT protected / &lt;&lt; {
+    / alg /    1  : -35, / ES384 /
+    / kid /    4  : 'https://issuer.example/cose-key3',
+    / typ /    16 : 294, / smd-cwt+sd-cwt (TBD1) /
+    / sd_alg / 170 : -16  / SHA256 /
+  } &gt;&gt;,
+  / CWT unprotected / {
+    / sd_claims / 17 : [ / these are all the disclosures /
+        / top-level claims /
+        &lt;&lt;[
+            [
+                /salt/   h'34821e0250edb1b8aa1e7fcaba161dd5',
+                /value/  "ABCD-123456",
+                /claim/  "inspector_license_number"
+            ],
+            [
+                /salt/   h'96e374cd67609df517d855e6ad3892f5'
+            ],
+            [
+                /salt/   h'dab6a2fe5be976c64c0006d738fca0ef'
+            ],
+            [
+                /salt/   h'ae02b9b92e7ca06c3326b357118fcc57'
+            ]
+        ]&gt;&gt;,
+        / inspection_dates /
+        &lt;&lt;[
+            [
+                /salt/   h'ad696c9e08b91319073b35c4df54715e',
+                /value/  1549560720   / inspected 7-Feb-2019 /
+            ],
+            [
+                /salt/   h'7ed13a094d0effbf257f5522fdb87446',
+                /value/  1612498440   / inspected 4-Feb-2021 /
+            ],
+            [
+                /salt/   h'd006ff82a4d84bcade7a008ad0fadb6e',
+                /value/  1674004740   / inspected 17-Jan-2023 /
+            ],
+            [
+                /salt/   h'ff65d029bca807f1fcd7fc7a66223ae1'
+            ],
+            [
+                /salt/   h'c7ecad77d36b5b171573d2e32d650a1e'
+            ]
+        ]&gt;&gt;,
+        / inspection_location /
+        &lt;&lt;[
+            [
+                /salt/   h'e39612407e99a347d61442957b3dfdac',
+                /value/  "us",
+                /claim/  "country"
+            ],
+            [
+                /salt/   h'4569990258b25a5267c17a3e3a225ec3',
+                /value/  "ca",
+                /claim/  "region"
+            ],
+            [
+                /salt/   h'e27403129cd88bf8fee4193e65339a35'
+            ]
+        ]&gt;&gt;
+    ]
+  },
+  / CWT payload / &lt;&lt; {
+    / iss / 1   : "https://issuer.example",
+    / sub / 2   : "https://holder.example",
+    / exp / 4   : 1725330600,  /2024-09-03T02:30:00+00:00Z/
+    / nbf / 5   : 1725243900,  /2024-09-02T02:25:00+00:00Z/
+    / iat / 6   : 1725244200,  /2024-09-02T02:30:00+00:00Z/
+    / cnf / 8   : {
+      / cose key / 1 : {
+        / kty /  1: 2,  / EC2   /
+        / crv / -1: 1,  / P-256 /
+        / x /   -2: h'8554eb275dcd6fbd1c7ac641aa2c90d9
+                      2022fd0d3024b5af18c7cc61ad527a2d',
+        / y /   -3: h'4dc7ae2c677e96d0cc82597655ce92d5
+                      503f54293d87875d1e79ce4770194343'
+      }
+    },
+    "most_recent_inspection_passed": true,
+    "inspection_dates": [
+        / redacted_element_hash of all inspection dates /
+        89([3, h'a9e2b659695a7af97fcf25f8e833ffa2
+                 0a4316fe29644715bdbd3804ac2bed99'])
+    ],
+    "inspection_location": {
+        "postal_code": "94188",
+        / redacted_claim_hash of country and region /
+        simple(60) : [2, h'02d992604bf0618156a8f5eef336f676
+                        1db9af99edbc662e7c32850557a0ebd9']
+    },
+    / redacted_claim_hash of inspector_license_number /
+    simple(60) : [3, h'3641ce21bec3c8c109da92b0be662719
+                    b67cd8a99e99cd3b379c1ff466c0ec28']
+  } &gt;&gt;,
+  / CWT signature / h'dc15ca869bad13b9a827191d7d71a444
+                      7ff213168f401982009a1c3629bce4a5
+                      921642d9f15707541fdc7d9bad5d37b6
+                      5d4d779b72273b9d1776a6675920a1a2
+                      68272dc848858b9ccdfc45521bbb3247
+                      316db1b829b63d63198af2b608826768'
+])
+</pre>
+</div>
+<figcaption><a href="#figure-10" class="selfRef">Figure 10</a>:
+<a href="#name-issued-smd-cwt-with-all-dis" class="selfRef">Issued SMD-CWT with all disclosures</a>
+          </figcaption></figure>
+</div>
+</section>
+</div>
+<div id="content-type">
+<section id="section-4.5">
+        <h3 id="name-content-type">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-content-type" class="section-name selfRef">Content-Type</a>
+        </h3>
+<p id="section-4.5-1">An SMD-CWT <span class="bcp14">MUST</span> declare its content type by including the <code>typ</code> protected header parameter <span>[<a href="#RFC9596" class="cite xref">RFC9596</a>]</span> with one of the
+following values:<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.5-2.1">
+            <p id="section-4.5-2.1.1">the unsigned integer Constrained Application Protocol (CoAP) <span>[<a href="#RFC7252" class="cite xref">RFC7252</a>]</span> content-format value TBD1 (294 suggested);
+or<a href="#section-4.5-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-2.2">
+            <p id="section-4.5-2.2.1">the string content type value <code>application/smd-cwt+sd-cwt</code>.<a href="#section-4.5-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="smd-kbt">
+<section id="section-5">
+      <h2 id="name-presentation">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-presentation" class="section-name selfRef">Presentation</a>
+      </h2>
+<p id="section-5-1">A Holder can selectively present some of the previously redacted claims in an SMD-KBT. An SMD-KBT has the same
+structure as an SD-KBT. The only difference is that, rather than simply omitting the Disclosures it does not wish to
+reveal, the Holder transforms each Disclosure introduced by this document from a simple enumeration of values into a
+Disclosure Proof: an array containing one Merkle proof per presented leaf.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">The Merkle proofs of a Disclosure Proof are not independent of each other. The hash of a copath node is not included
+in a Merkle proof when its subtree contains a presented leaf, since the Verifier recomputes it, or when it is already
+included in the Merkle proof of a previous leaf.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">For a given Disclosure, the Holder proceeds as follows:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-4">
+<li id="section-5-4.1">
+          <p id="section-5-4.1.1">Iterate over the non-Decoy entries and select those to be presented. In the example of <a href="#fig-presentation-tree" class="auto internal xref">Figure 11</a>,
+leaves <code>A</code> to <code>E</code> are iterated over, and only <code>A</code>, <code>D</code>, and <code>E</code> are presented.<a href="#section-5-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-4.2">
+          <p id="section-5-4.2.1">Initialize a visited set with the node indexes of the selected leaves and of all their ancestors. In the example of
+<a href="#fig-presentation-tree" class="auto internal xref">Figure 11</a>, the visited set contains nodes 0, 6, and 8 (<code>A</code>, <code>D</code>, and <code>E</code>) and nodes 1, 3, 5, 7, 9,
+and 11 (<code>J</code>, <code>R</code>, <code>K</code>, <code>V</code>, <code>L</code>, and <code>S</code>).<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-5-4.3">
+          <p id="section-5-4.3.1">For each selected leaf, from left to right, build its Merkle proof as an array:<a href="#section-5-4.3.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-4.3.2">
+<li id="section-5-4.3.2.1">
+              <p id="section-5-4.3.2.1.1">Build a Redacted Entry by prefixing the SMD-CWT entry with the node index of the leaf, and place it as the
+first element of the Merkle proof.<a href="#section-5-4.3.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-5-4.3.2.2">
+              <p id="section-5-4.3.2.2.1">Walk the copath of that leaf, from the leaf up to the root. For each node of the copath:<a href="#section-5-4.3.2.2.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5-4.3.2.2.2">
+<li id="section-5-4.3.2.2.2.1">
+                  <p id="section-5-4.3.2.2.2.1.1">If this node is in the visited set, skip it.<a href="#section-5-4.3.2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li id="section-5-4.3.2.2.2.2">
+                  <p id="section-5-4.3.2.2.2.2.1">Otherwise, append the hash of that node to the Merkle proof and add the node to the visited set. If that
+node is a leaf, its hash is the hash of its entry, computed as described in <a href="#merkle-root-hash" class="auto internal xref">Section 4.3</a>.
+Otherwise, its hash is the <code>MTH</code> of the subtree rooted at that node.<a href="#section-5-4.3.2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              </ol>
+</li>
+          </ol>
+</li>
+        <li id="section-5-4.4">
+          <p id="section-5-4.4.1">The Disclosure Proof is the array of the Merkle proofs, ordered by increasing node index of their leaf.<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<span id="name-merkle-tree-of-a-presentati"></span><div id="fig-presentation-tree">
+<figure id="figure-11">
+        <div id="section-5-5.1">
+          <div class="alignLeft art-svg artwork" id="section-5-5.1.1">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="408" viewBox="0 0 408 288" class="diagram" text-anchor="middle" font-family="monospace" font-size="13px" stroke-linecap="round">
+              <path d="M 128,112 L 128,128" fill="none" stroke="black"></path>
+              <path d="M 224,48 L 224,64" fill="none" stroke="black"></path>
+              <path d="M 320,112 L 320,128" fill="none" stroke="black"></path>
+              <path d="M 144,64 L 304,64" fill="none" stroke="black"></path>
+              <path d="M 96,128 L 160,128" fill="none" stroke="black"></path>
+              <path d="M 288,128 L 352,128" fill="none" stroke="black"></path>
+              <path d="M 88,176 L 96,192" fill="none" stroke="black"></path>
+              <path d="M 160,128 L 168,144" fill="none" stroke="black"></path>
+              <path d="M 184,176 L 192,192" fill="none" stroke="black"></path>
+              <path d="M 280,176 L 288,192" fill="none" stroke="black"></path>
+              <path d="M 304,64 L 312,80" fill="none" stroke="black"></path>
+              <path d="M 352,128 L 360,144" fill="none" stroke="black"></path>
+              <path d="M 376,176 L 384,192" fill="none" stroke="black"></path>
+              <path d="M 64,192 L 72,176" fill="none" stroke="black"></path>
+              <path d="M 88,144 L 96,128" fill="none" stroke="black"></path>
+              <path d="M 136,80 L 144,64" fill="none" stroke="black"></path>
+              <path d="M 160,192 L 168,176" fill="none" stroke="black"></path>
+              <path d="M 256,192 L 264,176" fill="none" stroke="black"></path>
+              <path d="M 280,144 L 288,128" fill="none" stroke="black"></path>
+              <path d="M 352,192 L 360,176" fill="none" stroke="black"></path>
+              <g class="text">
+                <text x="224" y="36">V</text>
+                <text x="128" y="100">R</text>
+                <text x="320" y="100">S</text>
+                <text x="80" y="164">J</text>
+                <text x="176" y="164">K</text>
+                <text x="272" y="164">L</text>
+                <text x="368" y="164">M</text>
+                <text x="56" y="212">A</text>
+                <text x="104" y="212">(B)</text>
+                <text x="152" y="212">(C)</text>
+                <text x="200" y="212">D</text>
+                <text x="248" y="212">E</text>
+                <text x="292" y="212">d1</text>
+                <text x="348" y="212">d2</text>
+                <text x="392" y="212">_</text>
+                <text x="24" y="244">Node:</text>
+                <text x="56" y="244">0</text>
+                <text x="80" y="244">1</text>
+                <text x="104" y="244">2</text>
+                <text x="128" y="244">3</text>
+                <text x="152" y="244">4</text>
+                <text x="176" y="244">5</text>
+                <text x="200" y="244">6</text>
+                <text x="224" y="244">7</text>
+                <text x="248" y="244">8</text>
+                <text x="272" y="244">9</text>
+                <text x="300" y="244">10</text>
+                <text x="324" y="244">11</text>
+                <text x="348" y="244">12</text>
+                <text x="372" y="244">13</text>
+                <text x="396" y="244">14</text>
+                <text x="24" y="276">Leaf:</text>
+                <text x="56" y="276">0</text>
+                <text x="104" y="276">1</text>
+                <text x="152" y="276">2</text>
+                <text x="200" y="276">3</text>
+                <text x="248" y="276">4</text>
+                <text x="296" y="276">5</text>
+                <text x="344" y="276">6</text>
+                <text x="392" y="276">7</text>
+              </g>
+            </svg><a href="#section-5-5.1.1" class="pilcrow">¶</a>
+</div>
+</div>
+<figcaption><a href="#figure-11" class="selfRef">Figure 11</a>:
+<a href="#name-merkle-tree-of-a-presentati" class="selfRef">Merkle Tree of a Presentation</a>
+        </figcaption></figure>
+</div>
+<p id="section-5-6">In the following examples, <code>hash&lt;&lt;X&gt;&gt;</code> denotes the hash of the entry <code>X</code> when <code>X</code> is a leaf, and the <code>MTH</code> of the
+subtree rooted at <code>X</code> otherwise.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">The copath of <code>A</code> consists of nodes 2 (<code>B</code>), 5 (<code>K</code>), and 11 (<code>S</code>). <code>B</code> is not visited: its hash is appended. <code>K</code> and
+<code>S</code> are visited: they are skipped. The Merkle proof for <code>A</code> is therefore:<a href="#section-5-7" class="pilcrow">¶</a></p>
+<span id="name-merkle-proof-of-a"></span><div id="fig-merkle-proof-leaf-a">
+<figure id="figure-12">
+        <div class="lang-cbor-diag sourcecode" id="section-5-8.1">
+<pre>
+[
+  [0, h'4e2f040d5bb57daf86698066be470c24', "A"],
+  hash&lt;&lt;B&gt;&gt;,
+]
+</pre>
+</div>
+<figcaption><a href="#figure-12" class="selfRef">Figure 12</a>:
+<a href="#name-merkle-proof-of-a" class="selfRef">Merkle Proof of A</a>
+        </figcaption></figure>
+</div>
+<p id="section-5-9">The copath of <code>D</code> consists of nodes 4 (<code>C</code>), 1 (<code>J</code>), and 11 (<code>S</code>). <code>C</code> is not visited: its hash is appended. <code>J</code> and
+<code>S</code> are visited: they are skipped. The Merkle proof for <code>D</code> is therefore:<a href="#section-5-9" class="pilcrow">¶</a></p>
+<span id="name-merkle-proof-of-d"></span><div id="fig-merkle-proof-leaf-d">
+<figure id="figure-13">
+        <div class="lang-cbor-diag sourcecode" id="section-5-10.1">
+<pre>
+[
+  [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"],
+  hash&lt;&lt;C&gt;&gt;,
+]
+</pre>
+</div>
+<figcaption><a href="#figure-13" class="selfRef">Figure 13</a>:
+<a href="#name-merkle-proof-of-d" class="selfRef">Merkle Proof of D</a>
+        </figcaption></figure>
+</div>
+<p id="section-5-11">The copath of <code>E</code> consists of nodes 10 (<code>d1</code>), 13 (<code>M</code>), and 3 (<code>R</code>). <code>d1</code> and <code>M</code> are not visited: their hashes are
+appended. <code>R</code> is visited: it is skipped. The Merkle proof for <code>E</code> is therefore:<a href="#section-5-11" class="pilcrow">¶</a></p>
+<span id="name-merkle-proof-of-e"></span><div id="fig-merkle-proof-leaf-e">
+<figure id="figure-14">
+        <div class="lang-cbor-diag sourcecode" id="section-5-12.1">
+<pre>
+[
+  [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"],
+  hash&lt;&lt;d1&gt;&gt;,
+  hash&lt;&lt;M&gt;&gt;,
+]
+</pre>
+</div>
+<figcaption><a href="#figure-14" class="selfRef">Figure 14</a>:
+<a href="#name-merkle-proof-of-e" class="selfRef">Merkle Proof of E</a>
+        </figcaption></figure>
+</div>
+<p id="section-5-13">The resulting Disclosure Proof is shown in <a href="#fig-disclosure-proof" class="auto internal xref">Figure 15</a>. It contains 4 hashes. The hashes of <code>J</code>, <code>K</code>, <code>R</code>,
+<code>L</code>, <code>S</code>, and <code>V</code> are recomputed by the Verifier.<a href="#section-5-13" class="pilcrow">¶</a></p>
+<span id="name-disclosure-proof"></span><div id="fig-disclosure-proof">
+<figure id="figure-15">
+        <div class="lang-cbor-diag sourcecode" id="section-5-14.1">
+<pre>
+[
+  [ [0, h'4e2f040d5bb57daf86698066be470c24', "A"], hash&lt;&lt;B&gt;&gt; ],             / "A" /
+  [ [6, h'add7fe2b052af5faf0ec67f57eb1454f', "D"], hash&lt;&lt;C&gt;&gt; ],             / "D" /
+  [ [8, h'6e0e0494c6aa9f9072c3410304aab730', "E"], hash&lt;&lt;d1&gt;&gt;, hash&lt;&lt;M&gt;&gt; ]  / "E" /
+]
+</pre>
+</div>
+<figcaption><a href="#figure-15" class="selfRef">Figure 15</a>:
+<a href="#name-disclosure-proof" class="selfRef">Disclosure Proof</a>
+        </figcaption></figure>
+</div>
+<p id="section-5-15">If the Holder presents all the non-Decoy entries <code>A</code> to <code>E</code> of <a href="#fig-presentation-tree" class="auto internal xref">Figure 11</a> instead, every copath node of
+<code>A</code>, <code>B</code>, <code>C</code>, and <code>D</code> is visited: their Merkle proofs each contain only their Redacted Entry. The Merkle proof of
+<code>E</code> is unchanged and contains <code>hash&lt;&lt;d1&gt;&gt;</code> and <code>hash&lt;&lt;M&gt;&gt;</code>. The resulting Disclosure Proof contains 2 hashes.<a href="#section-5-15" class="pilcrow">¶</a></p>
+<p id="section-5-16">If the Holder presents only <code>A</code> and <code>B</code>, the Merkle proof of <code>A</code> contains <code>hash&lt;&lt;K&gt;&gt;</code> and <code>hash&lt;&lt;S&gt;&gt;</code>, which are then
+visited, so the Merkle proof of <code>B</code> contains no hash.<a href="#section-5-16" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="verification">
+<section id="section-6">
+      <h2 id="name-verification">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-verification" class="section-name selfRef">Verification</a>
+      </h2>
+<p id="section-6-1">An SMD-CWT Verifier <span class="bcp14">MUST</span> perform the same verification as an SD-CWT Verifier. This section only describes how to
+validate a Disclosure Proof against the <code>redacted_root_hash</code> of the corresponding container.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">To validate an SMD-KBT, repeat this verification for all the disclosures presented. Then also perform the validation
+described in <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-9" class="relref">Section 9</a> of [<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span> since they all should pass as well.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">In this section, <code>n</code> is the size encoded in the <code>redacted_root_hash</code> (the first element of the array); the Merkle tree
+therefore has <code>2^n</code> leaves, its node indexes range from 0 to <code>2^ (n+1) - 2</code>, and its root has node index <code>2^n - 1</code>.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">The Verifier proceeds as follows:<a href="#section-6-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-5">
+<li id="section-6-5.1">
+          <p id="section-6-5.1.1">Verify that the Disclosure Proof contains at least one and at most <code>2^n</code> Merkle proofs.<a href="#section-6-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.2">
+          <p id="section-6-5.2.1">For each Merkle proof:<a href="#section-6-5.2.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-5.2.2">
+<li id="section-6-5.2.2.1">
+              <p id="section-6-5.2.2.1.1">Verify that it contains at most n + 1 elements.<a href="#section-6-5.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-6-5.2.2.2">
+              <p id="section-6-5.2.2.2.1">Verify that its first element is a Redacted Entry, and that the node index of this Redacted Entry is the
+node index of a leaf, i.e., an even number less than or equal to 2^ (n+1) - 2.<a href="#section-6-5.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-6-5.2.2.3">
+              <p id="section-6-5.2.2.3.1">Verify that this Redacted Entry matches the type of the container: a <code>salted-merkle-claim</code> if the container
+is a map, or a <code>salted-merkle-element</code> if it is an array, as defined in <a href="#cddl-salted-array" class="auto internal xref">Figure 9</a>. In
+particular, a Redacted Entry of a Decoy, which only contains a salt, is rejected.<a href="#section-6-5.2.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+</li>
+        <li id="section-6-5.3">
+          <p id="section-6-5.3.1">Verify that the node indexes of the Redacted Entries are sorted in increasing order.<a href="#section-6-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.4">
+          <p id="section-6-5.4.1">Initialize a visited set with the node indexes of the presented leaves and of all their ancestors. Also maintain a
+table associating node indexes with hashes, initially empty.<a href="#section-6-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.5">
+          <p id="section-6-5.5.1">For each Merkle proof:<a href="#section-6-5.5.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-5.5.2">
+<li id="section-6-5.5.2.1">
+              <p id="section-6-5.5.2.1.1">Remove the node index from the Redacted Entry. The remaining array is an SMD-CWT entry: compute its hash as
+described in <a href="#merkle-root-hash" class="auto internal xref">Section 4.3</a> and record it for the leaf in the table.<a href="#section-6-5.5.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-6-5.5.2.2">
+              <p id="section-6-5.5.2.2.1">Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:<a href="#section-6-5.5.2.2.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-5.5.2.2.2">
+<li id="section-6-5.5.2.2.2.1">
+                  <p id="section-6-5.5.2.2.2.1.1">If this node is in the visited set, skip it.<a href="#section-6-5.5.2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li id="section-6-5.5.2.2.2.2">
+                  <p id="section-6-5.5.2.2.2.2.1">Otherwise, take the next hash of the Merkle proof, record it for that node in the table, and add the node to
+the visited set. If the Merkle proof has no hash left, the validation fails.<a href="#section-6-5.5.2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              </ol>
+</li>
+            <li id="section-6-5.5.2.3">
+              <p id="section-6-5.5.2.3.1">Verify that all the hashes of the Merkle proof have been consumed. If not, the validation fails.<a href="#section-6-5.5.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+</li>
+        <li id="section-6-5.6">
+          <p id="section-6-5.6.1">Compute the hash of the root by walking down the tree from the root. For each node reached:<a href="#section-6-5.6.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-5.6.2">
+<li id="section-6-5.6.2.1">
+              <p id="section-6-5.6.2.1.1">If the table records a hash for this node, this is its hash, and its subtree is not walked.<a href="#section-6-5.6.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-6-5.6.2.2">
+              <p id="section-6-5.6.2.2.1">Otherwise, if this node is a leaf, the validation fails.<a href="#section-6-5.6.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-6-5.6.2.3">
+              <p id="section-6-5.6.2.3.1">Otherwise, walk its left child and then its right child. Its hash is the hash of the concatenation of their
+hashes, the hash of the left child coming first.<a href="#section-6-5.6.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+</li>
+        <li id="section-6-5.7">
+          <p id="section-6-5.7.1">Verify that the hash of the root is equal to the root hash in the <code>redacted_root_hash</code>.<a href="#section-6-5.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-5.8">
+          <p id="section-6-5.8.1">If any of these verifications fails, the validation of the whole Disclosure Proof fails.<a href="#section-6-5.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-6-6">Applied to the Disclosure Proof of <a href="#fig-disclosure-proof" class="auto internal xref">Figure 15</a>, the visited set initially contains nodes 0, 1, 3, 5, 6, 7,
+8, 9, and 11. The Verifier then:<a href="#section-6-6" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-7">
+<li id="section-6-7.1">
+          <p id="section-6-7.1.1">Processes the Merkle proof of <code>A</code>: it records <code>hash&lt;&lt;A&gt;&gt;</code> for node 0 and <code>hash&lt;&lt;B&gt;&gt;</code> for node 2. Nodes 5 and 11
+are visited.<a href="#section-6-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-7.2">
+          <p id="section-6-7.2.1">Processes the Merkle proof of <code>D</code>: it records <code>hash&lt;&lt;D&gt;&gt;</code> for node 6 and <code>hash&lt;&lt;C&gt;&gt;</code> for node 4. Nodes 1 and 11 are
+visited.<a href="#section-6-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-7.3">
+          <p id="section-6-7.3.1">Processes the Merkle proof of <code>E</code>: it records <code>hash&lt;&lt;E&gt;&gt;</code> for node 8, <code>hash&lt;&lt;d1&gt;&gt;</code> for node 10, and <code>hash&lt;&lt;M&gt;&gt;</code> for
+node 13. Node 3 is visited.<a href="#section-6-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-7.4">
+          <p id="section-6-7.4.1">Computes the hash of the root. The visited set now contains nodes 0 to 11 and 13, and the table associates nodes with
+hashes <code>[(0, A), (2, B), (4, C), (6, D), (8, E), (10, d1), (13, M)]</code>. The root <code>V</code> (node 7) is not in the
+table, so the Verifier walks down to <code>R</code> (node 3) and <code>S</code> (node 11), which are not in the table either. Under <code>R</code>,
+<code>J</code> (node 1) and <code>K</code> (node 5) are computed from nodes 0 and 2, and 4 and 6. Under <code>S</code>, <code>L</code> (node 9) is computed from
+nodes 8 and 10, and <code>M</code> (node 13) is in the table. <code>R</code> is then computed from <code>J</code> and <code>K</code>, <code>S</code> from <code>L</code> and <code>M</code>, and
+<code>V</code> from <code>R</code> and <code>S</code>.<a href="#section-6-7.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-7.5">
+          <p id="section-6-7.5.1">Verifies that <code>hash&lt;&lt;V&gt;&gt;</code> is equal to the root hash in the <code>redacted_root_hash</code>.<a href="#section-6-7.5.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+</section>
+</div>
+<div id="benefits-over-sd-cwt">
+<section id="section-7">
+      <h2 id="name-benefits-over-sd-cwt">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-benefits-over-sd-cwt" class="section-name selfRef">Benefits over SD-CWT</a>
+      </h2>
+<div id="smaller-tokens">
+<section id="section-7.1">
+        <h3 id="name-smaller-tokens">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-smaller-tokens" class="section-name selfRef">Smaller Tokens</a>
+        </h3>
+<p id="section-7.1-1">In SD-CWT, the payload contains the hash of every redacted entry, disclosed or not: a container with <code>e</code> redacted
+entries
+costs <code>34 * e</code> bytes in every presentation (assuming <code>sd_alg</code> is SHA-256).<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<p id="section-7.1-2">The size of a presentation therefore grows linearly with e in SD-CWT, but only logarithmically in SMD-CWT. For
+instance, the Disclosure Proof of <a href="#fig-disclosure-proof" class="auto internal xref">Figure 15</a> contains 4 hashes in addition to the root hash, i.e.,
+34 * 5 = 170 bytes, whereas an SD-CWT with the same 5 entries and 2 Decoys contains 34 * 7 = 238 bytes of hashes.<a href="#section-7.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="privacy">
+<section id="section-7.2">
+        <h3 id="name-privacy">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-privacy" class="section-name selfRef">Privacy</a>
+        </h3>
+<p id="section-7.2-1">In SD-CWT, the payload contains one hash per redacted entry, so a Verifier learns the number of redacted entries of each
+container Also given presentation of SD-KBT are linkable, a Verifier can witness an array of redacted elements grow or
+shrink which degrades privacy of the Holder. Decoys can be used to mitigate that, but they are expensive in terms of
+space wasted.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">In SMD-CWT, the Verifier only learns the logarithmic size of the tree. The Issuer can choose a larger n to hide this
+number further, at the cost of at most one hash per additional level (see <a href="#free-decoys" class="auto internal xref">Section 7.3</a>).<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="free-decoys">
+<section id="section-7.3">
+        <h3 id="name-free-decoys">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-free-decoys" class="section-name selfRef">Free Decoys</a>
+        </h3>
+<p id="section-7.3-1">In SD-CWT, each Decoy adds one hash, i.e., 34 bytes, to the presented token.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<p id="section-7.3-2">In SMD-CWT, the presented token contains only the root hash and the Merkle proofs of the disclosed claims. The size of
+these proofs depends on the height of the tree, not on the number of its leaves. Decoys can therefore be added at no
+cost up to the next power of two. Beyond that, doubling the number of leaves adds one level to the tree, which costs
+at most one additional hash, i.e., 34 bytes: the subtree rooted at the new copath node contains no presented leaf, and
+its hash is included at most once in the Disclosure Proof (see <a href="#smd-kbt" class="auto internal xref">Section 5</a>).<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="verification-time">
+<section id="section-7.4">
+        <h3 id="name-verification-time">
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-verification-time" class="section-name selfRef">Verification Time</a>
+        </h3>
+<p id="section-7.4-1">TODO: The sparser the presentation, the faster the verification; however, a full presentation takes twice as long to
+verify.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-8">
+      <h2 id="name-privacy-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<div id="claim-order">
+<section id="section-8.1">
+        <h3 id="name-leakage-of-claim-order">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-leakage-of-claim-order" class="section-name selfRef">Leakage of Claim Order</a>
+      </h3>
+</section>
+</div>
+</section>
+</div>
+<div id="security">
+<section id="section-9">
+      <h2 id="name-security-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-9-1">TODO Security<a href="#section-9-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana">
+<section id="section-10">
+      <h2 id="name-iana-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="cbor-tags">
+<section id="section-10.1">
+        <h3 id="name-cbor-tags">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-cbor-tags" class="section-name selfRef">CBOR Tags</a>
+        </h3>
+<p id="section-10.1-1">IANA is requested to register the following tag in the
+<a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml#tags">"CBOR Tags" registry</a>:<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+<div id="tbrrt">
+<section id="section-10.1.1">
+          <h4 id="name-to-be-redacted-root-tag">
+<a href="#section-10.1.1" class="section-number selfRef">10.1.1. </a><a href="#name-to-be-redacted-root-tag" class="section-name selfRef">To Be Redacted Root Tag</a>
+          </h4>
+<p id="section-10.1.1-1">This tag identifies an array or map containing elements to be redacted. The value of this tag is an array of two
+elements: the first is the base-2 logarithm of the number of leaves of the Merkle tree, i.e., the maximum number of
+hashes in a
+Merkle proof, and the second is the wrapped array or map.<a href="#section-10.1.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.1.1-2.1">
+              <p id="section-10.1.1-2.1.1">Tag: TBD2 (suggested 59)<a href="#section-10.1.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.2">
+              <p id="section-10.1.1-2.2.1">Data Item: (array or map)<a href="#section-10.1.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.3">
+              <p id="section-10.1.1-2.3.1">Semantics: An array or map containing elements to be redacted with a Merkle proof, each tagged with the To Be
+Redacted Tag defined in <span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-17.3.1" class="relref">Section 17.3.1</a> of [<a href="#SD-CWT" class="cite xref">SD-CWT</a>]</span>.<a href="#section-10.1.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.1.1-2.4">
+              <p id="section-10.1.1-2.4.1">Specification Document (s): <a href="#tbr-tag" class="auto internal xref">Section 4.1</a> of this specification<a href="#section-10.1.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+<div id="media-types">
+<section id="section-10.2">
+        <h3 id="name-media-types">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-media-types" class="section-name selfRef">Media Types</a>
+        </h3>
+<p id="section-10.2-1">IANA is requested to register the following media types in the
+<a href="https://www.iana.org/assignments/media-types/media-types.xhtml#application">"Media Types" registry</a>:<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+<div id="applicationsmd-cwtsd-cwt">
+<section id="section-10.2.1">
+          <h4 id="name-application-smd-cwtsd-cwt">
+<a href="#section-10.2.1" class="section-number selfRef">10.2.1. </a><a href="#name-application-smd-cwtsd-cwt" class="section-name selfRef">application/smd-cwt+sd-cwt</a>
+          </h4>
+<p id="section-10.2.1-1">The following completed registration template is provided:<a href="#section-10.2.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2.1-2.1">
+              <p id="section-10.2.1-2.1.1">Type name: application<a href="#section-10.2.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.2">
+              <p id="section-10.2.1-2.2.1">Subtype name: smd-cwt<a href="#section-10.2.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.3">
+              <p id="section-10.2.1-2.3.1">Required parameters: n/a<a href="#section-10.2.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.4">
+              <p id="section-10.2.1-2.4.1">Optional parameters: n/a<a href="#section-10.2.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.5">
+              <p id="section-10.2.1-2.5.1">Encoding considerations: binary<a href="#section-10.2.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.6">
+              <p id="section-10.2.1-2.6.1">Security considerations: <a href="#security" class="auto internal xref">Section 9</a> of this specification and <span>[<a href="#RFC8392" class="cite xref">RFC8392</a>]</span><a href="#section-10.2.1-2.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.7">
+              <p id="section-10.2.1-2.7.1">Interoperability considerations: n/a<a href="#section-10.2.1-2.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.8">
+              <p id="section-10.2.1-2.8.1">Published specification: <a href="#smd-cwt-definition" class="auto internal xref">Section 4</a> of this specification<a href="#section-10.2.1-2.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.9">
+              <p id="section-10.2.1-2.9.1">Applications that use this media type: TBD<a href="#section-10.2.1-2.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.10">
+              <p id="section-10.2.1-2.10.1">Fragment identifier considerations: n/a<a href="#section-10.2.1-2.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.11">
+              <p id="section-10.2.1-2.11.1">Additional information:<a href="#section-10.2.1-2.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2.1-2.11.2.1">
+                  <p id="section-10.2.1-2.11.2.1.1">Magic number (s): n/a<a href="#section-10.2.1-2.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.2.1-2.11.2.2">
+                  <p id="section-10.2.1-2.11.2.2.1">File extension (s): n/a<a href="#section-10.2.1-2.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.2.1-2.11.2.3">
+                  <p id="section-10.2.1-2.11.2.3.1">Macintosh file type code (s): n/a<a href="#section-10.2.1-2.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.2.1-2.12">
+              <p id="section-10.2.1-2.12.1">Person &amp; email address to contact for further information:
+SPICE WG mailing list (spice@ietf.org) or
+IETF Security Area (saag@ietf.org)<a href="#section-10.2.1-2.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.13">
+              <p id="section-10.2.1-2.13.1">Intended usage: COMMON<a href="#section-10.2.1-2.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.14">
+              <p id="section-10.2.1-2.14.1">Restrictions on usage: none<a href="#section-10.2.1-2.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.15">
+              <p id="section-10.2.1-2.15.1">Author: See Author's Addresses section<a href="#section-10.2.1-2.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.16">
+              <p id="section-10.2.1-2.16.1">Change controller: IETF<a href="#section-10.2.1-2.16.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.1-2.17">
+              <p id="section-10.2.1-2.17.1">Provisional registration? No<a href="#section-10.2.1-2.17.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+<div id="applicationsmd-kbtsd-kbt">
+<section id="section-10.2.2">
+          <h4 id="name-application-smd-kbtsd-kbt">
+<a href="#section-10.2.2" class="section-number selfRef">10.2.2. </a><a href="#name-application-smd-kbtsd-kbt" class="section-name selfRef">application/smd-kbt+sd-kbt</a>
+          </h4>
+<p id="section-10.2.2-1">The following completed registration template is provided:<a href="#section-10.2.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2.2-2.1">
+              <p id="section-10.2.2-2.1.1">Type name: application<a href="#section-10.2.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.2">
+              <p id="section-10.2.2-2.2.1">Subtype name: smd-kbt<a href="#section-10.2.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.3">
+              <p id="section-10.2.2-2.3.1">Required parameters: n/a<a href="#section-10.2.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.4">
+              <p id="section-10.2.2-2.4.1">Optional parameters: n/a<a href="#section-10.2.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.5">
+              <p id="section-10.2.2-2.5.1">Encoding considerations: binary<a href="#section-10.2.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.6">
+              <p id="section-10.2.2-2.6.1">Security considerations: <a href="#security" class="auto internal xref">Section 9</a> of this specification and <span>[<a href="#RFC8392" class="cite xref">RFC8392</a>]</span><a href="#section-10.2.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.7">
+              <p id="section-10.2.2-2.7.1">Interoperability considerations: n/a<a href="#section-10.2.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.8">
+              <p id="section-10.2.2-2.8.1">Published specification: <a href="#smd-kbt" class="auto internal xref">Section 5</a> of this specification<a href="#section-10.2.2-2.8.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.9">
+              <p id="section-10.2.2-2.9.1">Applications that use this media type: TBD<a href="#section-10.2.2-2.9.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.10">
+              <p id="section-10.2.2-2.10.1">Fragment identifier considerations: n/a<a href="#section-10.2.2-2.10.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.11">
+              <p id="section-10.2.2-2.11.1">Additional information:<a href="#section-10.2.2-2.11.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10.2.2-2.11.2.1">
+                  <p id="section-10.2.2-2.11.2.1.1">Magic number (s): n/a<a href="#section-10.2.2-2.11.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.2.2-2.11.2.2">
+                  <p id="section-10.2.2-2.11.2.2.1">File extension (s): n/a<a href="#section-10.2.2-2.11.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-10.2.2-2.11.2.3">
+                  <p id="section-10.2.2-2.11.2.3.1">Macintosh file type code (s): n/a<a href="#section-10.2.2-2.11.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              </ul>
+</li>
+            <li class="normal" id="section-10.2.2-2.12">
+              <p id="section-10.2.2-2.12.1">Person &amp; email address to contact for further information:
+SPICE WG mailing list (spice@ietf.org) or
+IETF Security Area (saag@ietf.org)<a href="#section-10.2.2-2.12.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.13">
+              <p id="section-10.2.2-2.13.1">Intended usage: COMMON<a href="#section-10.2.2-2.13.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.14">
+              <p id="section-10.2.2-2.14.1">Restrictions on usage: none<a href="#section-10.2.2-2.14.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.15">
+              <p id="section-10.2.2-2.15.1">Author: See Author's Addresses section<a href="#section-10.2.2-2.15.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.16">
+              <p id="section-10.2.2-2.16.1">Change controller: IETF<a href="#section-10.2.2-2.16.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-10.2.2-2.17">
+              <p id="section-10.2.2-2.17.1">Provisional registration? No<a href="#section-10.2.2-2.17.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
+      <h2 id="name-references">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-11.1">
+        <h3 id="name-normative-references">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.ietf-cbor-edn-literals">[I-D.ietf-cbor-edn-literals]</dt>
+        <dd>
+<span class="refAuthor">Bormann, C.</span>, <span class="refTitle">"Concise Diagnostic Notation (CDN)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-cbor-edn-literals-28</span>, <time datetime="2026-09-29" class="refDate">29 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-edn-literals-28">https://datatracker.ietf.org/doc/html/draft-ietf-cbor-edn-literals-28</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8392">[RFC8392]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Wahlstroem, E.</span>, <span class="refAuthor">Erdtman, S.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"CBOR Web Token (CWT)"</span>, <span class="seriesInfo">RFC 8392</span>, <span class="seriesInfo">DOI 10.17487/RFC8392</span>, <time datetime="2018-05" class="refDate">May 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8392">https://www.rfc-editor.org/rfc/rfc8392</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8610">[RFC8610]</dt>
+        <dd>
+<span class="refAuthor">Birkholz, H.</span>, <span class="refAuthor">Vigano, C.</span>, and <span class="refAuthor">C. Bormann</span>, <span class="refTitle">"Concise Data Definition Language (CDDL): A Notational Convention to Express Concise Binary Object Representation (CBOR) and JSON Data Structures"</span>, <span class="seriesInfo">RFC 8610</span>, <span class="seriesInfo">DOI 10.17487/RFC8610</span>, <time datetime="2019-06" class="refDate">June 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8610">https://www.rfc-editor.org/rfc/rfc8610</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9052">[RFC9052]</dt>
+        <dd>
+<span class="refAuthor">Schaad, J.</span>, <span class="refTitle">"CBOR Object Signing and Encryption (COSE): Structures and Process"</span>, <span class="seriesInfo">STD 96</span>, <span class="seriesInfo">RFC 9052</span>, <span class="seriesInfo">DOI 10.17487/RFC9052</span>, <time datetime="2022-08" class="refDate">August 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9052">https://www.rfc-editor.org/rfc/rfc9052</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9053">[RFC9053]</dt>
+        <dd>
+<span class="refAuthor">Schaad, J.</span>, <span class="refTitle">"CBOR Object Signing and Encryption (COSE): Initial Algorithms"</span>, <span class="seriesInfo">RFC 9053</span>, <span class="seriesInfo">DOI 10.17487/RFC9053</span>, <time datetime="2022-08" class="refDate">August 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9053">https://www.rfc-editor.org/rfc/rfc9053</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9162">[RFC9162]</dt>
+        <dd>
+<span class="refAuthor">Laurie, B.</span>, <span class="refAuthor">Messeri, E.</span>, and <span class="refAuthor">R. Stradling</span>, <span class="refTitle">"Certificate Transparency Version 2.0"</span>, <span class="seriesInfo">RFC 9162</span>, <span class="seriesInfo">DOI 10.17487/RFC9162</span>, <time datetime="2021-12" class="refDate">December 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9162">https://www.rfc-editor.org/rfc/rfc9162</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9420">[RFC9420]</dt>
+        <dd>
+<span class="refAuthor">Barnes, R.</span>, <span class="refAuthor">Beurdouche, B.</span>, <span class="refAuthor">Robert, R.</span>, <span class="refAuthor">Millican, J.</span>, <span class="refAuthor">Omara, E.</span>, and <span class="refAuthor">K. Cohn-Gordon</span>, <span class="refTitle">"The Messaging Layer Security (MLS) Protocol"</span>, <span class="seriesInfo">RFC 9420</span>, <span class="seriesInfo">DOI 10.17487/RFC9420</span>, <time datetime="2023-07" class="refDate">July 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9420">https://www.rfc-editor.org/rfc/rfc9420</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9596">[RFC9596]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.B.</span> and <span class="refAuthor">O. Steele</span>, <span class="refTitle">"CBOR Object Signing and Encryption (COSE) "typ" (type) Header Parameter"</span>, <span class="seriesInfo">RFC 9596</span>, <span class="seriesInfo">DOI 10.17487/RFC9596</span>, <time datetime="2024-06" class="refDate">June 2024</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9596">https://www.rfc-editor.org/rfc/rfc9596</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="SD-CWT">[SD-CWT]</dt>
+      <dd>
+<span class="refAuthor">Prorock, M.</span>, <span class="refAuthor">Steele, O.</span>, <span class="refAuthor">Birkholz, H.</span>, and <span class="refAuthor">R. Mahy</span>, <span class="refTitle">"Selective Disclosure CBOR Web Tokens (SD-CWT)"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-spice-sd-cwt-08</span>, <time datetime="2026-06-01" class="refDate">1 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08">https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-11.2">
+        <h3 id="name-informative-references">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC7252">[RFC7252]</dt>
+      <dd>
+<span class="refAuthor">Shelby, Z.</span>, <span class="refAuthor">Hartke, K.</span>, and <span class="refAuthor">C. Bormann</span>, <span class="refTitle">"The Constrained Application Protocol (CoAP)"</span>, <span class="seriesInfo">RFC 7252</span>, <span class="seriesInfo">DOI 10.17487/RFC7252</span>, <time datetime="2014-06" class="refDate">June 2014</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7252">https://www.rfc-editor.org/rfc/rfc7252</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="cddl">
+<section id="appendix-A">
+      <h2 id="name-complete-cddl-schema">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-complete-cddl-schema" class="section-name selfRef">Complete CDDL Schema</a>
+      </h2>
+<span id="name-a-complete-cddl-description"></span><div id="cddl-schema">
+<figure id="figure-16">
+        <div class="breakable lang-cddl sourcecode" id="appendix-A-1.1">
+<pre>
+; in SMD-CWT
+salted-merkle-array = [ +bstr-encoded-salted-merkle-entry ]
+bstr-encoded-salted-merkle-entry = bstr .cbor salted-merkle-entries
+
+; in SMD-KBT
+salted-array-proofs = [ +bstr-encoded-salted-proof ]
+bstr-encoded-salted-proof = bstr .cbor disclosure-proof
+
+; where salted-claim, salted-element and decoy are already defined in {{SD-CWT}}
+salted-merkle-entry = salted-claim / salted-element / decoy
+
+salted-merkle-entries = [ +salted-merkle-entry ]
+
+; one Merkle proof per presented leaf, ordered by increasing node index
+disclosure-proof = [ +merkle-proof ]
+
+merkle-proof = [
+  redacted-entry,
+  * bstr             ; hash of a copath node, from the leaf up to the root
+]
+
+; a presented entry prefixed with the node index of its leaf; Decoys are never presented
+redacted-entry = salted-merkle-claim / salted-merkle-element
+salted-merkle-claim = [
+  uint,              ; node index of the leaf
+  bstr .size 16,     ; 128-bit salt
+  any,               ; Claim Value
+  (int / text)       ; Claim Key
+]
+salted-merkle-element = [
+  uint,              ; node index of the leaf
+  bstr .size 16,     ; 128-bit salt
+  any                ; Claim Value
+]
+
+; repeated here
+salted-claim = [
+  bstr .size 16,     ; 128-bit salt
+  any,               ; Claim Value
+  (int / text)       ; Claim Key
+]
+salted-element = [
+  bstr .size 16,     ; 128-bit salt
+  any                ; Claim Value
+]
+decoy = [
+  bstr .size 16      ; 128-bit salt
+]
+
+; redacted_claims_root is used as a map label. The corresponding value is
+; a Redacted Claim Root Hash.
+; TODO: any Unassigned value in https://www.iana.org/assignments/cbor-simple-values#simple
+redacted_claims_hash = #7.60  ; CBOR simple value 60
+
+redacted_root_hash = [
+  uint  ; logarithm(2) of the number of leaves represented in this root hash
+  bstr, ; root hash
+]
+
+; CBOR tag for wrapping the Merkle Root Hash of all the redacted elements in an array.
+; TODO: any Unassigned in https://www.iana.org/assignments/cbor-tags#tags
+MERKLE_REDACTED_ELEMENT_TAGNUM = 89
+
+; redacted_elements_root is used in CDDL payloads that contain
+; array elements that are redacted.
+redacted_element_hash = #6.&lt;MERKLE_REDACTED_ELEMENT_TAGNUM&gt;( redacted_root_hash )
+</pre>
+</div>
+<figcaption><a href="#figure-16" class="selfRef">Figure 16</a>:
+<a href="#name-a-complete-cddl-description" class="selfRef">A complete CDDL description of SMD-CWT</a>
+        </figcaption></figure>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">TODO acknowledge.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Beltram Maldant</span></div>
+<div dir="auto" class="left"><span class="org">SimpleLogin</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:beltram.ietf@pm.me" class="email">beltram.ietf@pm.me</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
