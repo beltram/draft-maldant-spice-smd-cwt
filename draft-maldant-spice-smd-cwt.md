@@ -340,10 +340,10 @@ array, after the elements that are not redacted.
 {: #fig-smd-cwt-disclosures title="SMD-CWT Disclosures"}
 
 In an SMD-CWT, a Disclosure is an array of all redacted elements of a given container (either a CBOR map or array).
-Each of these elements has the structure described in {{Section 3.2 of SD-CWT}}, except that it is not individually
-wrapped in a CBOR bstr.
+Each of these elements has the structure described in {{Section 3.2 of SD-CWT}}, except that they are not individually
+wrapped in a CBOR bstr (but the outer disclosure is).
 
-This Disclosure, along with all other Merkle Disclosures, MUST be placed in the `sd_claims` unprotected header
+This Disclosure, along with all other Disclosures, MUST be placed in the `sd_claims` unprotected header
 parameter of the SMD-CWT, as defined in {{SD-CWT}}.
 
 ~~~ cddl
