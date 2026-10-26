@@ -513,9 +513,8 @@ The Verifier proceeds as follows:
        described in {{merkle-root-hash}} and record it for the leaf in the table.
     2. Walk the copath of the leaf, from the leaf up to the root. For each node of the copath:
         1. If this node is in the visited set, skip it.
-        2. Otherwise, take the next hash of the Merkle proof, record it for that node in the table, and add the node to
+        2. Otherwise, compute the hash of the Merkle proof, record it for that node in the table, and add the node to
            the visited set. If the Merkle proof has no hash left, the validation fails.
-    3. Verify that all the hashes of the Merkle proof have been consumed. If not, the validation fails.
 7. While the table contains two nodes that are siblings, remove both of them from the table, hash the concatenation
    of their hashes, the hash of the left sibling coming first, and record the result for their parent in the table.
 8. Verify that the table contains a single node, that this node is the root, and that its hash is equal to the root
@@ -541,14 +540,9 @@ Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set ini
 
 ## Smaller Tokens
 
-In SD-CWT, the payload contains the hash of every redacted entry, disclosed or not: a container with e redacted entries
-costs 34 * e bytes in every presentation (assuming `sd_alg` is SHA-256).
-
-In SMD-CWT, the payload contains a single Redacted Root Hash per container, and a presentation adds the node index of
-each of the k presented leaves and h hashes, where 2^n >= e and:
-
-* h <= k * n, since each Merkle proof contains at most n hashes;
-* h <= 2^n - k, since each hash covers a distinct subtree containing no presented leaf.
+In SD-CWT, the payload contains the hash of every redacted entry, disclosed or not: a container with `e` redacted
+entries
+costs `34 * e` bytes in every presentation (assuming `sd_alg` is SHA-256).
 
 The size of a presentation therefore grows linearly with e in SD-CWT, but only logarithmically in SMD-CWT. For
 instance, the Disclosure Proof of {{fig-disclosure-proof}} contains 4 hashes in addition to the root hash, i.e.,
@@ -557,16 +551,12 @@ instance, the Disclosure Proof of {{fig-disclosure-proof}} contains 4 hashes in 
 ## Privacy
 
 In SD-CWT, the payload contains one hash per redacted entry, so a Verifier learns the number of redacted entries of each
-container, Decoys included, and, for an array, the positions of its redacted elements.
+container Also given presentation of SD-KBT are linkable, a Verifier can witness an array of redacted elements grow or
+shrink which degrades privacy of the Holder. Decoys can be used to mitigate that, but they are expensive in terms of
+space wasted.
 
-In SMD-CWT, the Verifier only learns the size n of the tree, i.e., that the container has at most 2^n redacted
-entries. The Issuer can choose a larger n to hide this number further, at the cost of at most one hash per additional
-level (see {{free-decoys}}).
-
-A presentation reveals the positions of the presented leaves and, since Decoys are placed on the right of the rightmost
-entry (see {{decoys}}), a lower bound on the number of entries (see {{claim-order}}). The hashes of a Merkle
-proof reveal nothing more: their number only depends on these positions and on n, and since entries and Decoys are
-salted, a hash does not reveal what its subtree contains.
+In SMD-CWT, the Verifier only learns the logarithmic size of the tree. The Issuer can choose a larger n to hide this
+number further, at the cost of at most one hash per additional level (see {{free-decoys}}).
 
 ## Free Decoys {#free-decoys}
 
