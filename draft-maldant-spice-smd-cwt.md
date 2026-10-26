@@ -227,8 +227,8 @@ Contrary to SD-CWT, Decoys have a different purpose here. They do not directly p
 inference of private information. They are mandatory. They serve as a blinding factor to prevent a Verifier from
 guessing the number of leaves since a blank leaf hash is the hash of zero bytes.
 
-So we need to place the required amount of decoys in the SD-CWT, but filling all the nodes at right of the rightmost
-leaf would inflate the SD-CWT for no reason.
+So we need to place the required amount of decoys in the SD-CWT, but filling all the blank nodes would inflate the
+SD-CWT for no reason.
 So for each node in the Copath of the rightmost leaf, the leftmost blank leaf of the subtree rooted at that node MUST be
 replaced with a Decoy. When the entries fill all the leaves of the tree, no Decoy is added.
 
