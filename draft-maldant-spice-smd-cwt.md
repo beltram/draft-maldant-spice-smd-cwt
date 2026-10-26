@@ -225,7 +225,7 @@ would have a height of 2 since we requested it, so the last node index would be 
 
 Contrary to SD-CWT, Decoys have a different purpose here. They do not directly participate to hardening the Verifier's
 inference of private information. They are mandatory. They serve as a blinding factor to prevent a Verifier from
-guessing the number of leaves. A blank leaf hash is the hash of zero bytes.
+guessing the number of leaves since a blank leaf hash is the hash of zero bytes.
 
 So we need to place the required amount of decoys in the SD-CWT, but filling all the nodes at right of the rightmost
 leaf would inflate the SD-CWT for no reason.
