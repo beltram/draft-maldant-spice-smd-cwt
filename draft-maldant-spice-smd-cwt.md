@@ -153,9 +153,8 @@ An SMD-CWT Issuer MUST support the `To Be Redacted Tag` and the `To Be Decoy Tag
 
 The `To Be Redacted Root Tag` (tag 59), defined in {{tbrrt}}, indicates to the Issuer that a claim or an array element
 is intended to be selectively disclosed with a Disclosure Proof. This tag wraps the element to be redacted in an array
-of size 2. The first element of this array is the base-2 logarithm of the size of the Merkle tree used for redaction.
-This size MAY be
-greater than the number of claims to redact, but MUST NOT be lower.
+of size 2. The first element of this array is the depth of the Merkle tree used for redaction.
+This size MAY be greater than the number of claims to redact, but MUST NOT be lower.
 
 {{fig-cwt-claimset-pre-issuance}} shows the example payload with the corresponding annotations.
 
