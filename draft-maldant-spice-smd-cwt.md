@@ -69,21 +69,19 @@ tree, and disclosed claims are presented with a Merkle proof.
 
 This document defines Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT), an extension to SD-CWT {{SD-CWT}}.
 
-SD-CWT provides an efficient mechanism by which a Holder controls which
-claims it presents to a Verifier, thereby improving the privacy of the
-Holder. However, when the presentation is sparse and only a subset of the claims is disclosed, a
-Verifier learns the total number of claims, reducing the
-privacy benefit of selective disclosure. Furthermore, each redacted claim
-adds 34 bytes to the presented token (SD-KBT), even though the claim
-itself is not disclosed to the Verifier.
+SD-CWT provides an efficient mechanism by which a Holder controls which claims it presents to a Verifier, thereby
+improving the privacy of the Holder. However, when the presentation is sparse and only a subset of the claims is
+disclosed, a Verifier learns the total number of claims and its evolution across presentations, reducing the privacy
+benefit of selective disclosure.
 
-To address both issues, this document specifies that, rather than hashing
-each claim individually and placing the resulting hashes in a CBOR array,
-the claims of each map or array are placed in a Merkle tree and only the root hash of that tree
-is included in the SD-CWT. A presentation of the token then includes only
-a Merkle proof attesting to the integrity of the disclosed claims. The
-size of this proof is logarithmic in the number of claims, whereas the
+To address this issue, this document specifies that, rather than hashing each claim individually and placing the
+resulting hashes in a CBOR array, the claims of each map or array are placed in a Merkle tree and only the root hash of
+that tree is included in the SD-CWT. A presentation of the token then includes only a Merkle inclusion proof attesting
+to the integrity of the disclosed claims. The size of this proof is logarithmic in the number of claims, whereas the
 size of an enumeration of all redacted claims is linear in that number.
+
+Put together these changes over SD-CWT result in significantly smaller presentations ; Verifiers do not learn the number
+of redacted elements, Decoys cost almost nothing and eventually verification time slightly drops.
 
 # Terminology
 
@@ -524,7 +522,7 @@ Applied to the Disclosure Proof of {{fig-disclosure-proof}}, the visited set ini
    `V` from `R` and `S`.
 5. Verifies that `hash<<V>>` is equal to the root hash in the `redacted_root_hash`.
 
-# Benefits over SD-CWT
+# Benefits over SD-CWT {#benefits}
 
 ## Smaller Tokens
 
