@@ -190,7 +190,7 @@ branching factor would provide neither additional benefit nor the desired proper
 
 The Merkle tree is a left-balanced perfect binary tree, as shown in {{fig-merkle-tree-example}}. Unbalanced trees are
 not used, as they are vulnerable to forgery attacks. Perfect binary trees are also easier to represent in memory, and
-their node indexes are easier to compute, as explained in {{Appendix C of !RFC9420}}.
+their node indexes are easier to compute, as explained in {{Appendix C of ?RFC9420}}.
 
 ~~~ aasvg
               root
