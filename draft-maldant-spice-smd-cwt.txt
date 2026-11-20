@@ -4,8 +4,8 @@
 
 Secure Patterns for Internet CrEdentials                      B. Maldant
 Internet-Draft                                               SimpleLogin
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                        20 November 2026
+Expires: 24 May 2027
 
 
          Selective Merkle Disclosure CBOR Web Tokens (SMD-CWT)
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 24 May 2027.
 
 Copyright Notice
 
@@ -114,19 +114,23 @@ Table of Contents
    which claims it presents to a Verifier, thereby improving the privacy
    of the Holder.  However, when the presentation is sparse and only a
    subset of the claims is disclosed, a Verifier learns the total number
-   of claims, reducing the privacy benefit of selective disclosure.
-   Furthermore, each redacted claim adds 34 bytes to the presented token
-   (SD-KBT), even though the claim itself is not disclosed to the
-   Verifier.
+   of claims and its evolution across presentations, reducing the
+   privacy benefit of selective disclosure.
 
-   To address both issues, this document specifies that, rather than
+   To address this issue, this document specifies that, rather than
    hashing each claim individually and placing the resulting hashes in a
    CBOR array, the claims of each map or array are placed in a Merkle
    tree and only the root hash of that tree is included in the SD-CWT.
-   A presentation of the token then includes only a Merkle proof
-   attesting to the integrity of the disclosed claims.  The size of this
-   proof is logarithmic in the number of claims, whereas the size of an
-   enumeration of all redacted claims is linear in that number.
+   A presentation of the token then includes only a Merkle inclusion
+   proof attesting to the integrity of the disclosed claims.  The size
+   of this proof is logarithmic in the number of claims, whereas the
+   size of an enumeration of all redacted claims is linear in that
+   number.
+
+   Put together these changes over SD-CWT result in significantly
+   smaller presentations ; Verifiers do not learn the number of redacted
+   elements, Decoys cost almost nothing and eventually verification time
+   slightly drops.
 
 2.  Terminology
 
@@ -217,9 +221,9 @@ Table of Contents
    indicates to the Issuer that a claim or an array element is intended
    to be selectively disclosed with a Disclosure Proof.  This tag wraps
    the element to be redacted in an array of size 2.  The first element
-   of this array is the base-2 logarithm of the size of the Merkle tree
-   used for redaction.  This size MAY be greater than the number of
-   claims to redact, but MUST NOT be lower.
+   of this array is the depth of the Merkle tree used for redaction.
+   This size MAY be greater than the number of claims to redact, but
+   MUST NOT be lower.
 
    Figure 2 shows the example payload with the corresponding
    annotations.
@@ -1020,9 +1024,9 @@ Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12
 
    [I-D.ietf-cbor-edn-literals]
               Bormann, C., "Concise Diagnostic Notation (CDN)", Work in
-              Progress, Internet-Draft, draft-ietf-cbor-edn-literals-28,
-              29 September 2026, <https://datatracker.ietf.org/doc/html/
-              draft-ietf-cbor-edn-literals-28>.
+              Progress, Internet-Draft, draft-ietf-cbor-edn-literals-29,
+              31 October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-cbor-edn-literals-29>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -1060,11 +1064,6 @@ Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12
               Transparency Version 2.0", RFC 9162, DOI 10.17487/RFC9162,
               December 2021, <https://www.rfc-editor.org/rfc/rfc9162>.
 
-   [RFC9420]  Barnes, R., Beurdouche, B., Robert, R., Millican, J.,
-              Omara, E., and K. Cohn-Gordon, "The Messaging Layer
-              Security (MLS) Protocol", RFC 9420, DOI 10.17487/RFC9420,
-              July 2023, <https://www.rfc-editor.org/rfc/rfc9420>.
-
    [RFC9596]  Jones, M.B. and O. Steele, "CBOR Object Signing and
               Encryption (COSE) "typ" (type) Header Parameter",
               RFC 9596, DOI 10.17487/RFC9596, June 2024,
@@ -1082,6 +1081,11 @@ Leaf: 0     1     2     3     4     5     6     7     8     9     10    11    12
               Application Protocol (CoAP)", RFC 7252,
               DOI 10.17487/RFC7252, June 2014,
               <https://www.rfc-editor.org/rfc/rfc7252>.
+
+   [RFC9420]  Barnes, R., Beurdouche, B., Robert, R., Millican, J.,
+              Omara, E., and K. Cohn-Gordon, "The Messaging Layer
+              Security (MLS) Protocol", RFC 9420, DOI 10.17487/RFC9420,
+              July 2023, <https://www.rfc-editor.org/rfc/rfc9420>.
 
 Appendix A.  Complete CDDL Schema
 
