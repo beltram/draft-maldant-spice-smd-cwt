@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-11-19T06:43:09.707904+00:00",
+  "timestamp": "2026-11-22T05:53:33.871079+00:00",
   "repo": "beltram/draft-maldant-spice-smd-cwt",
   "labels": [
     {
@@ -108,6 +108,34 @@
       "mergedBy": "beltram",
       "mergeCommit": {
         "oid": "2077aa4178d4247af599bd46315b57f75aba79fd"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "id": "PR_kwDOUr4qss8AAAABQnucWw",
+      "title": "chore: review",
+      "url": "https://github.com/beltram/draft-maldant-spice-smd-cwt/pull/3",
+      "state": "MERGED",
+      "author": "beltram",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2026-11-20T08:39:46Z",
+      "updatedAt": "2026-11-20T08:40:23Z",
+      "baseRepository": "beltram/draft-maldant-spice-smd-cwt",
+      "baseRefName": "main",
+      "baseRefOid": "cfc4ad50ba8d29a4cc862e16b5c0d4f33df410d5",
+      "headRepository": "beltram/draft-maldant-spice-smd-cwt",
+      "headRefName": "feat/review",
+      "headRefOid": "0bd76e270c07485e0b409eb51f2df9e2eb3033b2",
+      "closedAt": "2026-11-20T08:40:23Z",
+      "mergedAt": "2026-11-20T08:40:23Z",
+      "mergedBy": "beltram",
+      "mergeCommit": {
+        "oid": "433776e7b649426b0d96e7a0f2632fa6a861052d"
       },
       "comments": [],
       "reviews": []
